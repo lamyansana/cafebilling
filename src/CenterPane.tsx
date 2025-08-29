@@ -1,4 +1,4 @@
-import type { MenuItem } from './App'
+import type { MenuItem } from './Master'
 
 interface CenterPaneProps {
   addToCart: (item: MenuItem) => void

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { CartItem } from './App'
+import type { CartItem } from './Master'
 
 interface RightPaneProps {
   cart: CartItem[]
@@ -80,16 +80,6 @@ function RightPane({ cart, incrementQuantity, decrementQuantity, submitOrder }: 
               />
               UPI
             </label>
-            <label>
-              <input
-                type="radio"
-                name="payment"
-                value="Card"
-                checked={paymentMode === "Card"}
-                onChange={(e) => setPaymentMode(e.target.value)}
-              />
-              Card
-            </label>
           </div>
 
           <button className="submit-btn" onClick={() => submitOrder(paymentMode)}>
@@ -100,7 +90,7 @@ function RightPane({ cart, incrementQuantity, decrementQuantity, submitOrder }: 
 
       <hr />
 
-      <button className="view-btn" onClick={() => setShowOrders(!showOrders)}>
+      {/* <button className="view-btn" onClick={() => setShowOrders(!showOrders)}>
         {showOrders ? 'Hide Past Orders' : 'View Past Orders'}
       </button>
 
@@ -126,7 +116,7 @@ function RightPane({ cart, incrementQuantity, decrementQuantity, submitOrder }: 
           </tbody>
         </table>
       )}
-      {showOrders && pastOrders.length === 0 && <p>No past orders</p>}
+      {showOrders && pastOrders.length === 0 && <p>No past orders</p>} */}
     </div>
   )
 }
