@@ -50,26 +50,36 @@ function App() {
     )
   }
 
-  const submitOrder = () => {
-    if (cart.length === 0) return
+  const submitOrder = (paymentMode: string) => {
+  if (cart.length === 0) return
 
-    const timestamp = new Date().toLocaleString()
-    const itemsString = cart.map(ci => `${ci.name} x${ci.quantity}`).join('; ')
-    const total = cart.reduce((sum, ci) => sum + ci.price * ci.quantity, 0)
-    const newRow = `${timestamp}, "${itemsString}", ${total}\n`
-
-    const existingCSV = localStorage.getItem('ordersCSV')
-    let updatedCSV = ''
-    if (!existingCSV) {
-      updatedCSV = 'DateTime, Items, Total\n' + newRow
-    } else {
-      updatedCSV = existingCSV + newRow
-    }
-
-    localStorage.setItem('ordersCSV', updatedCSV)
-    setCart([])
-    alert('Order submitted!')
+  // Generate Order Number (auto-increment)
+  const existingCSV = localStorage.getItem('ordersCSV')
+  let orderNumber = 1
+  if (existingCSV) {
+    const rows = existingCSV.trim().split('\n')
+    orderNumber = rows.length // header + rows
   }
+
+  const timestamp = new Date().toLocaleString()
+  const itemsString = cart.map(ci => `${ci.name} x${ci.quantity}`).join('; ')
+  const total = cart.reduce((sum, ci) => sum + ci.price * ci.quantity, 0)
+
+  const newRow = `${orderNumber}, ${timestamp}, "${itemsString}", ${total}, ${paymentMode}\n`
+
+  let updatedCSV = ''
+  if (!existingCSV) {
+    updatedCSV = 'OrderNumber, DateTime, Items, Total, PaymentMode\n' + newRow
+  } else {
+    updatedCSV = existingCSV + newRow
+  }
+
+  localStorage.setItem('ordersCSV', updatedCSV)
+  setCart([])
+  alert(`Order #${orderNumber} submitted successfully with ${paymentMode} payment!`)
+}
+
+
 
   return (
     <div className="container">

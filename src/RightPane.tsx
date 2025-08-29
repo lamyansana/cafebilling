@@ -5,11 +5,12 @@ interface RightPaneProps {
   cart: CartItem[]
   incrementQuantity: (id: number) => void
   decrementQuantity: (id: number) => void
-  submitOrder: () => void
+  submitOrder: (paymentMode: string) => void
 }
 
 function RightPane({ cart, incrementQuantity, decrementQuantity, submitOrder }: RightPaneProps) {
   const [showOrders, setShowOrders] = useState(false)
+  const [paymentMode, setPaymentMode] = useState("Cash") // default Cash
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
@@ -27,6 +28,7 @@ function RightPane({ cart, incrementQuantity, decrementQuantity, submitOrder }: 
         DateTime: cols[0]?.trim(),
         Items: cols[1]?.replace(/"/g, '').trim(),
         Total: cols[2]?.trim(),
+        PaymentMode: cols[3]?.trim(),
       }
     })
   }
@@ -54,7 +56,45 @@ function RightPane({ cart, incrementQuantity, decrementQuantity, submitOrder }: 
             ))}
           </ul>
           <h3>Total: ₹{total}</h3>
-          <button className="submit-btn" onClick={submitOrder}>Submit Order</button>
+
+          {/* 🔹 Payment Mode Selection */}
+          <div className="payment-modes">
+            <h4>Select Payment Mode:</h4>
+            <label>
+              <input
+                type="radio"
+                name="payment"
+                value="Cash"
+                checked={paymentMode === "Cash"}
+                onChange={(e) => setPaymentMode(e.target.value)}
+              />
+              Cash
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="payment"
+                value="UPI"
+                checked={paymentMode === "UPI"}
+                onChange={(e) => setPaymentMode(e.target.value)}
+              />
+              UPI
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="payment"
+                value="Card"
+                checked={paymentMode === "Card"}
+                onChange={(e) => setPaymentMode(e.target.value)}
+              />
+              Card
+            </label>
+          </div>
+
+          <button className="submit-btn" onClick={() => submitOrder(paymentMode)}>
+            Submit Order
+          </button>
         </>
       )}
 
@@ -71,6 +111,7 @@ function RightPane({ cart, incrementQuantity, decrementQuantity, submitOrder }: 
               <th>DateTime</th>
               <th>Items</th>
               <th>Total</th>
+              <th>Payment Mode</th>
             </tr>
           </thead>
           <tbody>
@@ -79,6 +120,7 @@ function RightPane({ cart, incrementQuantity, decrementQuantity, submitOrder }: 
                 <td>{order.DateTime}</td>
                 <td>{order.Items}</td>
                 <td>₹{order.Total}</td>
+                <td>{order.PaymentMode}</td>
               </tr>
             ))}
           </tbody>

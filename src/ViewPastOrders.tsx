@@ -1,13 +1,17 @@
 import React, { useState } from "react";
 
 type Order = {
+  OrderNumber: string;
   DateTime: string;
   Items: string;
   Total: string;
+  PaymentMode: string;
 };
 
 const ViewPastOrders: React.FC = () => {
-  const [filter, setFilter] = useState<"today" | "week" | "month" | "year" | "range">("today");
+  const [filter, setFilter] = useState<
+    "today" | "week" | "month" | "year" | "range"
+  >("today");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
@@ -19,11 +23,15 @@ const ViewPastOrders: React.FC = () => {
     const dataRows = rows.slice(1);
 
     return dataRows.map((row) => {
-      const cols = row.split(/,(.+),/); // split into 3 columns
+      // split safely into 5 columns
+      const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+
       return {
-        DateTime: cols[0]?.trim(),
-        Items: cols[1]?.replace(/"/g, "").trim(),
-        Total: cols[2]?.trim(),
+        OrderNumber: cols[0]?.trim(),
+        DateTime: cols[1]?.trim(),
+        Items: cols[2]?.replace(/"/g, "").trim(),
+        Total: cols[3]?.trim(),
+        PaymentMode: cols[4]?.trim(),
       };
     });
   };
@@ -85,7 +93,10 @@ const ViewPastOrders: React.FC = () => {
       {/* Filter controls */}
       <div style={{ marginBottom: "1rem" }}>
         <label>Filter: </label>
-        <select value={filter} onChange={(e) => setFilter(e.target.value as any)}>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as any)}
+        >
           <option value="today">Today</option>
           <option value="week">This Week</option>
           <option value="month">This Month</option>
@@ -115,17 +126,21 @@ const ViewPastOrders: React.FC = () => {
         <table border={1} cellPadding={6}>
           <thead>
             <tr>
+              <th>Order #</th>
               <th>DateTime</th>
               <th>Items</th>
               <th>Total</th>
+              <th>Payment Mode</th>
             </tr>
           </thead>
           <tbody>
             {filteredOrders.map((order, idx) => (
               <tr key={idx}>
+                <td>{order.OrderNumber}</td>
                 <td>{order.DateTime}</td>
                 <td>{order.Items}</td>
                 <td>₹{order.Total}</td>
+                <td>{order.PaymentMode}</td>
               </tr>
             ))}
           </tbody>
