@@ -1,8 +1,9 @@
-import './App.css'
-import CenterPane from './CenterPane'
-import LeftPane from './LeftPane'
-import RightPane from './RightPane'
-import { useState } from 'react'
+import { useState } from "react"
+import "./App.css"
+import LeftPane from "./LeftPane"
+import CenterPane from "./CenterPane"
+import RightPane from "./RightPane"
+import ViewPastOrders from "./ViewPastOrders"
 
 export interface MenuItem {
   id: number
@@ -16,16 +17,18 @@ export interface CartItem extends MenuItem {
 
 function App() {
   const [cart, setCart] = useState<CartItem[]>([])
+  const [activeView, setActiveView] = useState<"menu" | "pastOrders">("menu")
 
   const addToCart = (item: MenuItem) => {
-    setCart(prevCart => {
-      const existing = prevCart.find(ci => ci.id === item.id)
+    setCart((prev) => {
+      const existing = prev.find((c) => c.id === item.id)
       if (existing) {
-        return prevCart.map(ci =>
-          ci.id === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci
+        return prev.map((c) =>
+          c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c
         )
+      } else {
+        return [...prev, { ...item, quantity: 1 }]
       }
-      return [...prevCart, { ...item, quantity: 1 }]
     })
   }
 
@@ -69,15 +72,19 @@ function App() {
   }
 
   return (
-    <div className='container'>
-      <LeftPane />
-      <CenterPane addToCart={addToCart} />
+    <div className="container">
+      <LeftPane setActiveView={setActiveView} />
+      {activeView === "menu" ? (
+        <CenterPane addToCart={addToCart} />
+      ) : (
+        <ViewPastOrders />
+      )}
       <RightPane
-        cart={cart}
-        incrementQuantity={incrementQuantity}
-        decrementQuantity={decrementQuantity}
-        submitOrder={submitOrder}
-      />
+      cart={cart}
+      incrementQuantity={incrementQuantity}
+      decrementQuantity={decrementQuantity}
+      submitOrder={submitOrder}
+    />
     </div>
   )
 }
