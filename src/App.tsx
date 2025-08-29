@@ -1,6 +1,7 @@
 
 import "./App.css"
-import Master from "./Master"
+import Login from "./Login"
+
 
 
 
@@ -12,7 +13,7 @@ function App() {
 
   return (
     <div >
-      <Master/>
+      <Login/>
     
     </div>
   )
