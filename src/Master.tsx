@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import "./App.css"
 import LeftPane from "./LeftPane"
 import CenterPane from "./CenterPane"
@@ -7,6 +8,7 @@ import ViewPastOrders from "./ViewPastOrders"
 
 export interface MenuItem {
   id: number
+  category: string
   name: string
   price: number
 }
@@ -17,7 +19,6 @@ export interface CartItem extends MenuItem {
 
 function Master() {
   const [cart, setCart] = useState<CartItem[]>([])
-  const [activeView, setActiveView] = useState<"menu" | "pastOrders">("menu")
 
   const addToCart = (item: MenuItem) => {
     setCart((prev) => {
@@ -33,69 +34,73 @@ function Master() {
   }
 
   const incrementQuantity = (id: number) => {
-    setCart(prevCart =>
-      prevCart.map(ci =>
+    setCart((prevCart) =>
+      prevCart.map((ci) =>
         ci.id === id ? { ...ci, quantity: ci.quantity + 1 } : ci
       )
     )
   }
 
   const decrementQuantity = (id: number) => {
-    setCart(prevCart =>
+    setCart((prevCart) =>
       prevCart
-        .map(ci =>
+        .map((ci) =>
           ci.id === id ? { ...ci, quantity: ci.quantity - 1 } : ci
         )
-        .filter(ci => ci.quantity > 0)
+        .filter((ci) => ci.quantity > 0)
     )
   }
 
   const submitOrder = (paymentMode: string) => {
-  if (cart.length === 0) return
+    if (cart.length === 0) return
 
-  // Generate Order Number (auto-increment)
-  const existingCSV = localStorage.getItem('ordersCSV')
-  let orderNumber = 1
-  if (existingCSV) {
-    const rows = existingCSV.trim().split('\n')
-    orderNumber = rows.length // header + rows
+    // Generate Order Number (auto-increment)
+    const existingCSV = localStorage.getItem("ordersCSV")
+    let orderNumber = 1
+    if (existingCSV) {
+      const rows = existingCSV.trim().split("\n")
+      orderNumber = rows.length // header + rows
+    }
+
+    const timestamp = new Date().toLocaleString()
+    const itemsString = cart.map((ci) => `${ci.name} x${ci.quantity}`).join("; ")
+    const total = cart.reduce((sum, ci) => sum + ci.price * ci.quantity, 0)
+
+    const newRow = `${orderNumber}, ${timestamp}, "${itemsString}", ${total}, ${paymentMode}\n`
+
+    let updatedCSV = ""
+    if (!existingCSV) {
+      updatedCSV =
+        "OrderNumber, DateTime, Items, Total, PaymentMode\n" + newRow
+    } else {
+      updatedCSV = existingCSV + newRow
+    }
+
+    localStorage.setItem("ordersCSV", updatedCSV)
+    setCart([])
+    alert(
+      `Order #${orderNumber} submitted successfully with ${paymentMode} payment!`
+    )
   }
-
-  const timestamp = new Date().toLocaleString()
-  const itemsString = cart.map(ci => `${ci.name} x${ci.quantity}`).join('; ')
-  const total = cart.reduce((sum, ci) => sum + ci.price * ci.quantity, 0)
-
-  const newRow = `${orderNumber}, ${timestamp}, "${itemsString}", ${total}, ${paymentMode}\n`
-
-  let updatedCSV = ''
-  if (!existingCSV) {
-    updatedCSV = 'OrderNumber, DateTime, Items, Total, PaymentMode\n' + newRow
-  } else {
-    updatedCSV = existingCSV + newRow
-  }
-
-  localStorage.setItem('ordersCSV', updatedCSV)
-  setCart([])
-  alert(`Order #${orderNumber} submitted successfully with ${paymentMode} payment!`)
-}
-
-
 
   return (
-    <div className="container">
-      <LeftPane setActiveView={setActiveView} />
-      {activeView === "menu" ? (
-        <CenterPane addToCart={addToCart} />
-      ) : (
-        <ViewPastOrders />
-      )}
-      <RightPane
-      cart={cart}
-      incrementQuantity={incrementQuantity}
-      decrementQuantity={decrementQuantity}
-      submitOrder={submitOrder}
-    />
-    </div>
+    <BrowserRouter>
+      <div className="container">
+        <LeftPane />
+        <Routes>
+          {/* Default route → redirect to menu/maggi-&-noodles */}
+          <Route path="/" element={<Navigate to="/menu/maggi-&-noodles" replace />} />
+          <Route path="/menu/*" element={<CenterPane addToCart={addToCart} />} />
+          <Route path="/past-orders" element={<ViewPastOrders />} />
+        </Routes>
+        <RightPane
+          cart={cart}
+          incrementQuantity={incrementQuantity}
+          decrementQuantity={decrementQuantity}
+          submitOrder={submitOrder}
+        />
+      </div>
+    </BrowserRouter>
   )
 }
 
