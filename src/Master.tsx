@@ -5,6 +5,8 @@ import LeftPane from "./LeftPane"
 import CenterPane from "./CenterPane"
 import RightPane from "./RightPane"
 import ViewPastOrders from "./ViewPastOrders"
+import SalesReport from "./SalesReport"
+import { menuItems } from "./CenterPane"
 
 export interface MenuItem {
   id: number
@@ -167,6 +169,7 @@ const submitOrder = (orderId: number) => {
           <Route path="/" element={<Navigate to="/menu/maggi-and-noodles" replace />} />
           <Route path="/menu/*" element={<CenterPane addToCart={addToCart} />} />
           <Route path="/past-orders" element={<ViewPastOrders />} />
+          <Route path="/sales-report" element={<SalesReport menuItems={menuItems} />} />
         </Routes>
         <RightPane
           orders={pendingOrders}

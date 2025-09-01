@@ -13,7 +13,7 @@ const slugify = (str: string) =>
     .replace(/\s+/g, "-")       // replace spaces
     .replace(/[^\w-]+/g, "");   // remove non-word chars
 
-const menuItems: MenuItem[] = [
+export const menuItems: MenuItem[] = [
   // ☕ Coffee & Hot Beverages
   { id: 1, name: "Cappuccino (m)", price: 50, category: "Coffee & Hot Beverages" },
   { id: 2, name: "Coffee Mocha (m)", price: 50, category: "Coffee & Hot Beverages" },
