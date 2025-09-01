@@ -1,49 +1,53 @@
-import { useState } from 'react'
-import type { CartItem } from './Master'
+import type { PendingOrder } from "./Master"
 
 interface RightPaneProps {
-  cart: CartItem[]
+  orders: PendingOrder[]
+  activeOrderId: number
+  switchOrder: (id: number) => void
+  addNewOrder: () => void
   incrementQuantity: (id: number) => void
   decrementQuantity: (id: number) => void
-  submitOrder: (paymentMode: string) => void
+  setPaymentMode: (mode: string) => void
+  submitOrder: (id: number) => void
 }
 
-function RightPane({ cart, incrementQuantity, decrementQuantity, submitOrder }: RightPaneProps) {
-  const [showOrders, setShowOrders] = useState(false)
-  const [paymentMode, setPaymentMode] = useState("Cash") // default Cash
-
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-
-  const getPastOrders = () => {
-    const csv = localStorage.getItem('ordersCSV')
-    if (!csv) return []
-
-    const rows = csv.trim().split('\n')
-    const headers = rows[0].split(',')
-    const dataRows = rows.slice(1)
-
-    return dataRows.map(row => {
-      const cols = row.split(/,(.+),/) // smart split for 3 cols
-      return {
-        DateTime: cols[0]?.trim(),
-        Items: cols[1]?.replace(/"/g, '').trim(),
-        Total: cols[2]?.trim(),
-        PaymentMode: cols[3]?.trim(),
-      }
-    })
-  }
-
-  const pastOrders = getPastOrders()
+function RightPane({
+  orders,
+  activeOrderId,
+  switchOrder,
+  addNewOrder,
+  incrementQuantity,
+  decrementQuantity,
+  setPaymentMode,
+  submitOrder,
+}: RightPaneProps) {
+  const activeOrder = orders.find(o => o.id === activeOrderId)!
+  const total = activeOrder.cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   return (
     <div className="right-pane">
-      <h2>Cart</h2>
-      {cart.length === 0 ? (
+      {/* 🔹 Order Tabs */}
+      <div className="order-tabs">
+        {orders.map(order => (
+          <button
+            key={order.id}
+            onClick={() => switchOrder(order.id)}
+            className={`tab-btn ${order.id === activeOrderId ? "active" : ""}`}
+          >
+            {order.name} 
+          </button>
+        ))}
+        <button className="add-order-btn" onClick={addNewOrder}>+ New</button>
+      </div>
+
+      <h2>{activeOrder.name}</h2>
+
+      {activeOrder.cart.length === 0 ? (
         <p>No items yet</p>
       ) : (
         <>
           <ul>
-            {cart.map(item => (
+            {activeOrder.cart.map(item => (
               <li key={item.id} className="cart-item">
                 <span>{item.name}</span>
                 <span>₹{item.price}</span>
@@ -60,63 +64,35 @@ function RightPane({ cart, incrementQuantity, decrementQuantity, submitOrder }: 
           {/* 🔹 Payment Mode Selection */}
           <div className="payment-modes">
             <h4>Select Payment Mode:</h4>
-            <label>
+            <label className={`payment-option ${activeOrder.paymentMode === "Cash" ? "active" : ""}`}>
               <input
                 type="radio"
-                name="payment"
+                name={`payment-${activeOrder.id}`}
                 value="Cash"
-                checked={paymentMode === "Cash"}
+                checked={activeOrder.paymentMode === "Cash"}
                 onChange={(e) => setPaymentMode(e.target.value)}
               />
-              Cash
+              <span>Cash</span>
             </label>
-            <label>
+            <label className={`payment-option ${activeOrder.paymentMode === "UPI" ? "active" : ""}`}>
               <input
                 type="radio"
-                name="payment"
+                name={`payment-${activeOrder.id}`}
                 value="UPI"
-                checked={paymentMode === "UPI"}
+                checked={activeOrder.paymentMode === "UPI"}
                 onChange={(e) => setPaymentMode(e.target.value)}
               />
-              UPI
+              <span>UPI</span>
             </label>
           </div>
 
-          <button className="submit-btn" onClick={() => submitOrder(paymentMode)}>
-            Submit Order
-          </button>
+          {!activeOrder.isSubmitted && (
+            <button className="submit-btn" onClick={() => submitOrder(activeOrder.id)}>
+              Submit Order
+            </button>
+          )}
         </>
       )}
-
-      <hr />
-
-      {/* <button className="view-btn" onClick={() => setShowOrders(!showOrders)}>
-        {showOrders ? 'Hide Past Orders' : 'View Past Orders'}
-      </button>
-
-      {showOrders && pastOrders.length > 0 && (
-        <table className="orders-table">
-          <thead>
-            <tr>
-              <th>DateTime</th>
-              <th>Items</th>
-              <th>Total</th>
-              <th>Payment Mode</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pastOrders.map((order, idx) => (
-              <tr key={idx}>
-                <td>{order.DateTime}</td>
-                <td>{order.Items}</td>
-                <td>₹{order.Total}</td>
-                <td>{order.PaymentMode}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {showOrders && pastOrders.length === 0 && <p>No past orders</p>} */}
     </div>
   )
 }

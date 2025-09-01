@@ -14,7 +14,7 @@ const LeftPane: React.FC = () => {
       <h2>📋 Options</h2>
       <nav>
         <NavLink
-          to="/menu/Coffee & Hot Beverages"
+          to="/menu/maggi-and-noodles"
           className={({ isActive }) =>
             isActive ? "active-link" : "inactive-link"
           }

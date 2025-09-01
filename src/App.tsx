@@ -10,7 +10,7 @@ const App: React.FC = () => {
     e.preventDefault();
 
     // simple demo check
-    if (username === "myco" && password === "o") {
+    if (username === "myco" && password === "op") {
       setIsLoggedIn(true);
     } else {
       alert("Invalid username or password");

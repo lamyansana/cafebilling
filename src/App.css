@@ -140,7 +140,7 @@
 }
 
 .cart-item button {
-  background-color: #ffd700;
+  background-color: #42b1d3ff;
   border: none;
   border-radius: 4px;
   padding: 4px 8px;
@@ -149,7 +149,7 @@
 }
 
 .cart-item button:hover {
-  background-color: #e6c200;
+  background-color: #42b1d3ff;
 }
 
 
@@ -225,4 +225,28 @@
 /* Optional hover effect */
 .menu-link:hover {
   background-color: #f0f0f0;
+}
+
+
+.payment-option {
+  display: inline-block;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.payment-option input[type="radio"] {
+  display: none; /* hide default radio button */
+}
+
+.payment-option span {
+  padding: 8px 16px;
+  border-radius: 5px;
+  background-color: #f0f0f0; /* inactive bg */
+  color: #333;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.payment-option input[type="radio"]:checked + span {
+  background-color: #007bff; /* active bg */
+  color: #fff;               /* active text */
 }
