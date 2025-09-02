@@ -1,50 +1,58 @@
-import React, { useState } from "react"
+import React from "react"
 import { NavLink } from "react-router-dom"
+import "./App.css"
 
-const LeftPane: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false)
+interface LeftPaneProps {
+  isOpen: boolean
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
+}
 
+const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen }) => {
   return (
-    <div className={`left-pane ${isOpen ? "open" : ""}`}>
-      {/* Toggle button visible only on mobile */}
+    <div className={`left-pane ${isOpen ? "open" : "collapsed"}`}>
+      {/* Toggle button */}
       <button className="toggle-btn" onClick={() => setIsOpen(!isOpen)}>
-        ☰
+        {isOpen ? "«" : "☰"}
       </button>
 
-      <h2>📋 Options</h2>
-      <nav>
-        <NavLink
-          to="/menu/maggi-and-noodles"
-          className={({ isActive }) =>
-            isActive ? "active-link" : "inactive-link"
-          }
-          onClick={() => setIsOpen(false)}
-        >
-          Menu
-        </NavLink>
-        <NavLink
-          to="/past-orders"
-          className={({ isActive }) =>
-            isActive ? "active-link" : "inactive-link"
-          }
-          onClick={() => setIsOpen(false)}
-        >
-          View Past Orders
-        </NavLink>
-        <NavLink
-          to="/sales-report"
-          className={({ isActive }) => (isActive ? "active-link" : "inactive-link")}
-          onClick={() => setIsOpen(false)}
-        >
-          Sales Report
-        </NavLink>
+      {isOpen && (
+        <>
+          <h2>📋 Options</h2>
+          <nav>
+            <NavLink
+              to="/menu/maggi-and-noodles"
+              className={({ isActive }) =>
+                isActive ? "active-link" : "inactive-link"
+              }
+            >
+              Menu
+            </NavLink>
+            <NavLink
+              to="/past-orders"
+              className={({ isActive }) =>
+                isActive ? "active-link" : "inactive-link"
+              }
+            >
+              View Past Orders
+            </NavLink>
+            <NavLink
+              to="/sales-report"
+              className={({ isActive }) =>
+                isActive ? "active-link" : "inactive-link"
+              }
+            >
+              Sales Report
+            </NavLink>
 
-        <button className="disabled-btn" disabled>
-          Orders (coming soon)
-        </button>
-      </nav>
+            <button className="disabled-btn" disabled>
+              Orders (coming soon)
+            </button>
+          </nav>
+        </>
+      )}
     </div>
   )
 }
+
 
 export default LeftPane

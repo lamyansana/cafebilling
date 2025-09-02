@@ -8,6 +8,9 @@ import ViewPastOrders from "./ViewPastOrders"
 import SalesReport from "./SalesReport"
 import { menuItems } from "./CenterPane"
 
+
+
+
 export interface MenuItem {
   id: number
   category: string
@@ -31,9 +34,13 @@ function Master() {
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([
     { id: Date.now(), name: "Order 1", cart: [], paymentMode: "Cash", isSubmitted: false }
   ])
-  const [activeOrderId, setActiveOrderId] = useState(pendingOrders[0].id)
-
+  const [activeOrderId, setActiveOrderId] = useState<number | null>(
+  pendingOrders.length > 0 ? pendingOrders[0].id : null
+);
+  
   //const activeOrder = pendingOrders.find(o => o.id === activeOrderId)!
+
+  const [isLeftOpen, setIsLeftOpen] = useState(true)
 
   // ➕ Create new order tab
   const addNewOrder = () => {
@@ -47,6 +54,27 @@ function Master() {
     setPendingOrders(prev => [...prev, newOrder])
     setActiveOrderId(newOrder.id)
   }
+
+  const deleteOrder = (id: number) => {
+  setPendingOrders(prevOrders => {
+    const updatedOrders = prevOrders.filter(order => order.id !== id);
+
+    // If the deleted order was active
+    if (activeOrderId === id) {
+      if (updatedOrders.length > 0) {
+        // pick the first order in the updated list
+        setActiveOrderId(updatedOrders[0].id);
+      } else {
+        // no orders left
+        setActiveOrderId(null);
+      }
+    }
+
+    return updatedOrders;
+  });
+};
+
+
 
   const switchOrder = (id: number) => setActiveOrderId(id)
 
@@ -190,28 +218,48 @@ const submitOrder = (orderId: number) => {
 
 
   return (
-    <BrowserRouter>
-      <div className="container">
-        <LeftPane />
+  <BrowserRouter>
+  <div className="container">
+    {/* Left Pane */}
+    <LeftPane isOpen={isLeftOpen} setIsOpen={setIsLeftOpen} />
+
+    {/* Center + Right */}
+    <div
+      className="center-right"
+      style={{
+        display: "flex",
+        flexGrow: 1,
+        transition: "all 0.3s",
+      }}
+    >
+      {/* Center Pane */}
+      <div className="center-pane-wrapper" style={{ flexGrow: 1 }}>
         <Routes>
           <Route path="/" element={<Navigate to="/menu/maggi-and-noodles" replace />} />
           <Route path="/menu/*" element={<CenterPane addToCart={addToCart} />} />
           <Route path="/past-orders" element={<ViewPastOrders />} />
           <Route path="/sales-report" element={<SalesReport menuItems={menuItems} />} />
         </Routes>
-        <RightPane
-          orders={pendingOrders}
-          activeOrderId={activeOrderId}
-          switchOrder={switchOrder}
-          addNewOrder={addNewOrder}
-          incrementQuantity={incrementQuantity}
-          decrementQuantity={decrementQuantity}
-          setPaymentMode={setPaymentMode}
-          submitOrder={submitOrder}
-        />
       </div>
-    </BrowserRouter>
-  )
+
+      {/* Right Pane */}
+      <RightPane
+        orders={pendingOrders}
+        activeOrderId={activeOrderId}
+        setActiveOrderId={setActiveOrderId}
+        switchOrder={switchOrder}
+        addNewOrder={addNewOrder}
+        incrementQuantity={incrementQuantity}
+        decrementQuantity={decrementQuantity}
+        setPaymentMode={setPaymentMode}
+        submitOrder={submitOrder}
+        deleteOrder={deleteOrder}
+      />
+    </div>
+  </div>
+</BrowserRouter>
+
+)
 }
 
 export default Master
