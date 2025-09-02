@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 type Order = {
   OrderNumber: string;
-  DateTime: string; // stored as ISO string
+  DateTime: string;
   Items: string;
   Total: string;
   PaymentMode: string;
@@ -14,20 +14,25 @@ const ViewPastOrders: React.FC = () => {
   >("today");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
+  const [showDebug, setShowDebug] = useState(false);
 
   const getPastOrders = (): Order[] => {
     const csv = localStorage.getItem("ordersCSV");
-    if (!csv) return [];
+    if (!csv) {
+      console.log("No orders found in localStorage");
+      return [];
+    }
 
     const rows = csv.trim().split("\n");
+    if (rows.length <= 1) return [];
+
     const dataRows = rows.slice(1);
 
     return dataRows.map((row) => {
       const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-
       return {
         OrderNumber: cols[0]?.trim(),
-        DateTime: cols[1]?.replace(/"/g, "").trim(), // ISO string
+        DateTime: cols[1]?.replace(/"/g, "").trim(),
         Items: cols[2]?.replace(/"/g, "").trim(),
         Total: cols[3]?.trim(),
         PaymentMode: cols[4]?.trim(),
@@ -43,7 +48,7 @@ const ViewPastOrders: React.FC = () => {
     const now = new Date();
 
     return orders.filter((order) => {
-      const orderDate = new Date(order.DateTime); // ✅ ISO string parsing
+      const orderDate = new Date(order.DateTime);
 
       switch (filter) {
         case "today":
@@ -147,6 +152,27 @@ const ViewPastOrders: React.FC = () => {
       ) : (
         <p>No orders found for this filter.</p>
       )}
+
+      {/* Debug Panel */}
+      <div style={{ marginTop: "2rem" }}>
+        <button onClick={() => setShowDebug(!showDebug)}>
+          {showDebug ? "Hide Debug Data" : "Show Debug Data"}
+        </button>
+        {showDebug && (
+          <pre
+            style={{
+              marginTop: "1rem",
+              padding: "1rem",
+              background: "#f0f0f0",
+              border: "1px solid #ccc",
+              maxHeight: "200px",
+              overflowY: "scroll",
+            }}
+          >
+            {localStorage.getItem("ordersCSV") || "No data in localStorage"}
+          </pre>
+        )}
+      </div>
     </div>
   );
 };
