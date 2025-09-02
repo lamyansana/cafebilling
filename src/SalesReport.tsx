@@ -17,7 +17,7 @@ function SalesReport({ menuItems }: SalesReportProps) {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   )
-  const [filter, setFilter] = useState("day") // 🔹 day, week, month, year
+  const [filter, setFilter] = useState<"day" | "week" | "month" | "year">("day")
 
   const generateReport = (dateStr: string, filterType: string) => {
     const csv = localStorage.getItem("ordersCSV")
@@ -28,7 +28,7 @@ function SalesReport({ menuItems }: SalesReportProps) {
     }
 
     const rows = csv.trim().split("\n")
-    const dataRows = rows.slice(1) // skip header
+    const dataRows = rows.slice(1) // skip header row
 
     const itemMap: Record<string, SalesItem> = {}
     let grandTotal = 0
@@ -37,20 +37,26 @@ function SalesReport({ menuItems }: SalesReportProps) {
 
     dataRows.forEach((row) => {
       const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
-      const dateTime = cols[1]?.replace(/"/g, "").trim()
-      if (!dateTime) return
+      const dateTimeStr = cols[1]?.replace(/"/g, "").trim()
+      if (!dateTimeStr) return
 
-      const orderDate = new Date(dateTime)
+      // ✅ Always parse ISO format reliably
+      const orderDate = new Date(dateTimeStr)
+      if (isNaN(orderDate.getTime())) return
 
-      // 🔹 Apply filter
+      // ✅ Apply filter
       let include = false
       if (filterType === "day") {
         include = orderDate.toDateString() === selected.toDateString()
       } else if (filterType === "week") {
         const startOfWeek = new Date(selected)
         startOfWeek.setDate(selected.getDate() - selected.getDay())
+        startOfWeek.setHours(0, 0, 0, 0)
+
         const endOfWeek = new Date(startOfWeek)
         endOfWeek.setDate(startOfWeek.getDate() + 6)
+        endOfWeek.setHours(23, 59, 59, 999)
+
         include = orderDate >= startOfWeek && orderDate <= endOfWeek
       } else if (filterType === "month") {
         include =
@@ -91,17 +97,14 @@ function SalesReport({ menuItems }: SalesReportProps) {
     generateReport(selectedDate, filter)
   }, [selectedDate, filter])
 
-  // 🔹 Export to CSV
+  // ✅ Export to CSV
   const exportCSV = () => {
     if (report.length === 0) return
 
     let csvContent =
       "data:text/csv;charset=utf-8,Item,Quantity,Amount (₹)\n" +
       report
-        .map(
-          (item) =>
-            `${item.name},${item.quantity},${item.amount.toFixed(2)}`
-        )
+        .map((item) => `${item.name},${item.quantity},${item.amount.toFixed(2)}`)
         .join("\n") +
       `\nGrand Total,,${overallTotal.toFixed(2)}`
 
@@ -111,7 +114,7 @@ function SalesReport({ menuItems }: SalesReportProps) {
     link.click()
   }
 
-  // 🔹 Export to PDF
+  // ✅ Export to PDF
   const exportPDF = async () => {
     if (report.length === 0) return
 
@@ -149,7 +152,7 @@ function SalesReport({ menuItems }: SalesReportProps) {
     <div className="sales-report">
       <h2>📊 Sales Report</h2>
 
-      {/* 🔹 Date Picker */}
+      {/* Date Picker */}
       <div className="date-picker">
         <label>Select Date: </label>
         <input
@@ -159,7 +162,7 @@ function SalesReport({ menuItems }: SalesReportProps) {
         />
       </div>
 
-      {/* 🔹 Quick Filters */}
+      {/* Quick Filters */}
       <div className="filters">
         <button onClick={() => setFilter("day")}>Today</button>
         <button onClick={() => setFilter("week")}>This Week</button>
@@ -167,7 +170,7 @@ function SalesReport({ menuItems }: SalesReportProps) {
         <button onClick={() => setFilter("year")}>This Year</button>
       </div>
 
-      {/* 🔹 Export Buttons */}
+      {/* Export Buttons */}
       <div className="export-buttons" style={{ marginTop: "10px" }}>
         <button onClick={exportCSV}>Export CSV</button>
         <button onClick={exportPDF}>Export PDF</button>

@@ -109,9 +109,13 @@ function Master() {
   }
 
  // ✅ Submit individual order
+// ✅ Submit individual order
 const submitOrder = (orderId: number) => {
   const order = pendingOrders.find(o => o.id === orderId)
   if (!order || order.cart.length === 0) return
+
+  // 🔹 Ensure localStorage is safe (only in browser)
+  if (typeof window === "undefined") return
 
   const existingCSV = localStorage.getItem("ordersCSV")
   let orderNumber = 1
@@ -120,7 +124,7 @@ const submitOrder = (orderId: number) => {
     orderNumber = rows.length // header + rows
   }
 
-  const timestamp = new Date().toLocaleString()
+  const timestamp = new Date().toISOString()
   const itemsString = order.cart.map(ci => `${ci.name} x${ci.quantity}`).join("; ")
   const total = order.cart.reduce((sum, ci) => sum + ci.price * ci.quantity, 0)
 
@@ -139,7 +143,6 @@ const submitOrder = (orderId: number) => {
   setPendingOrders(prev => {
     const remaining = prev.filter(o => o.id !== orderId)
 
-    // if no pending orders left, add a fresh empty order
     if (remaining.length === 0) {
       const newOrder = {
         id: Date.now(),
@@ -151,7 +154,6 @@ const submitOrder = (orderId: number) => {
       setActiveOrderId(newOrder.id)
       return [newOrder]
     } else {
-      // Switch active to the first remaining order
       setActiveOrderId(remaining[0].id)
       return remaining
     }
@@ -159,6 +161,7 @@ const submitOrder = (orderId: number) => {
 
   alert(`Order #${orderNumber} submitted successfully with ${order.paymentMode} payment!`)
 }
+
 
 
   return (

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 type Order = {
   OrderNumber: string;
-  DateTime: string;
+  DateTime: string; // stored as ISO string
   Items: string;
   Total: string;
   PaymentMode: string;
@@ -23,12 +23,11 @@ const ViewPastOrders: React.FC = () => {
     const dataRows = rows.slice(1);
 
     return dataRows.map((row) => {
-      // split safely into 5 columns
       const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
 
       return {
         OrderNumber: cols[0]?.trim(),
-        DateTime: cols[1]?.trim(),
+        DateTime: cols[1]?.replace(/"/g, "").trim(), // ISO string
         Items: cols[2]?.replace(/"/g, "").trim(),
         Total: cols[3]?.trim(),
         PaymentMode: cols[4]?.trim(),
@@ -44,7 +43,7 @@ const ViewPastOrders: React.FC = () => {
     const now = new Date();
 
     return orders.filter((order) => {
-      const orderDate = new Date(order.DateTime);
+      const orderDate = new Date(order.DateTime); // ✅ ISO string parsing
 
       switch (filter) {
         case "today":
@@ -137,7 +136,7 @@ const ViewPastOrders: React.FC = () => {
             {filteredOrders.map((order, idx) => (
               <tr key={idx}>
                 <td>{order.OrderNumber}</td>
-                <td>{order.DateTime}</td>
+                <td>{new Date(order.DateTime).toLocaleString()}</td>
                 <td>{order.Items}</td>
                 <td>₹{order.Total}</td>
                 <td>{order.PaymentMode}</td>
