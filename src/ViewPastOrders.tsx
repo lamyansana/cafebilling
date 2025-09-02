@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 type Order = {
   OrderNumber: string;
@@ -9,26 +9,22 @@ type Order = {
 };
 
 const ViewPastOrders: React.FC = () => {
-  const [filter, setFilter] = useState<
-    "today" | "week" | "month" | "year" | "range"
-  >("today");
+  const [filter, setFilter] = useState<"today" | "week" | "month" | "year" | "range">("today");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [showDebug, setShowDebug] = useState(false);
+  const [pastOrders, setPastOrders] = useState<Order[]>([]);
 
-  const getPastOrders = (): Order[] => {
+  // ✅ Load CSV orders safely only on client
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const csv = localStorage.getItem("ordersCSV");
-    if (!csv) {
-      console.log("No orders found in localStorage");
-      return [];
-    }
+    if (!csv) return;
 
     const rows = csv.trim().split("\n");
-    if (rows.length <= 1) return [];
-
     const dataRows = rows.slice(1);
 
-    return dataRows.map((row) => {
+    const parsed = dataRows.map((row) => {
       const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
       return {
         OrderNumber: cols[0]?.trim(),
@@ -38,13 +34,13 @@ const ViewPastOrders: React.FC = () => {
         PaymentMode: cols[4]?.trim(),
       };
     });
-  };
 
-  const pastOrders = getPastOrders();
+    setPastOrders(parsed);
+  }, []);
 
+  // 🔍 Filtering
   const filterOrders = (orders: Order[]) => {
     if (orders.length === 0) return [];
-
     const now = new Date();
 
     return orders.filter((order) => {
@@ -97,10 +93,7 @@ const ViewPastOrders: React.FC = () => {
       {/* Filter controls */}
       <div style={{ marginBottom: "1rem" }}>
         <label>Filter: </label>
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as any)}
-        >
+        <select value={filter} onChange={(e) => setFilter(e.target.value as any)}>
           <option value="today">Today</option>
           <option value="week">This Week</option>
           <option value="month">This Month</option>
@@ -152,27 +145,6 @@ const ViewPastOrders: React.FC = () => {
       ) : (
         <p>No orders found for this filter.</p>
       )}
-
-      {/* Debug Panel */}
-      <div style={{ marginTop: "2rem" }}>
-        <button onClick={() => setShowDebug(!showDebug)}>
-          {showDebug ? "Hide Debug Data" : "Show Debug Data"}
-        </button>
-        {showDebug && (
-          <pre
-            style={{
-              marginTop: "1rem",
-              padding: "1rem",
-              background: "#f0f0f0",
-              border: "1px solid #ccc",
-              maxHeight: "200px",
-              overflowY: "scroll",
-            }}
-          >
-            {localStorage.getItem("ordersCSV") || "No data in localStorage"}
-          </pre>
-        )}
-      </div>
     </div>
   );
 };

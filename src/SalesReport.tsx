@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import type { MenuItem } from "./Master"
 
+
 interface SalesItem {
   name: string
   quantity: number

@@ -111,37 +111,59 @@ function Master() {
  // ✅ Submit individual order
 // ✅ Submit individual order
 const submitOrder = (orderId: number) => {
-  const order = pendingOrders.find(o => o.id === orderId)
-  if (!order || order.cart.length === 0) return
+  const order = pendingOrders.find((o) => o.id === orderId);
+  if (!order || order.cart.length === 0) return;
 
   // 🔹 Ensure localStorage is safe (only in browser)
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") return;
 
-  const existingCSV = localStorage.getItem("ordersCSV")
-  let orderNumber = 1
+  const existingCSV = localStorage.getItem("ordersCSV");
+  let orderNumber = 1; // default
+
   if (existingCSV) {
-    const rows = existingCSV.trim().split("\n")
-    orderNumber = rows.length // header + rows
+    const rows = existingCSV.trim().split("\n").slice(1); // skip header
+    const todayStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    // Filter only today's rows (safely)
+    const todaysOrders = rows.filter((row) => {
+      const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+      if (cols.length < 2) return false;
+      const dateStr = cols[1].replace(/"/g, "").trim();
+      if (!dateStr) return false;
+
+      const rowDate = new Date(dateStr);
+      if (isNaN(rowDate.getTime())) return false; // invalid date
+
+      return rowDate.toISOString().split("T")[0] === todayStr;
+    });
+
+    orderNumber = todaysOrders.length + 1;
   }
 
-  const timestamp = new Date().toISOString()
-  const itemsString = order.cart.map(ci => `${ci.name} x${ci.quantity}`).join("; ")
-  const total = order.cart.reduce((sum, ci) => sum + ci.price * ci.quantity, 0)
+  const timestamp = new Date().toISOString();
+  const itemsString = order.cart
+    .map((ci) => `${ci.name} x${ci.quantity}`)
+    .join("; ");
+  const total = order.cart.reduce(
+    (sum, ci) => sum + ci.price * ci.quantity,
+    0
+  );
 
-  const newRow = `${orderNumber}, "${timestamp}", "${itemsString}", ${total}, ${order.paymentMode}\n`
+  const newRow = `${orderNumber}, "${timestamp}", "${itemsString}", ${total}, ${order.paymentMode}\n`;
 
-  let updatedCSV = ""
+  let updatedCSV = "";
   if (!existingCSV) {
-    updatedCSV = "OrderNumber, DateTime, Items, Total, PaymentMode\n" + newRow
+    updatedCSV =
+      "OrderNumber, DateTime, Items, Total, PaymentMode\n" + newRow;
   } else {
-    updatedCSV = existingCSV + newRow
+    updatedCSV = existingCSV + newRow;
   }
 
-  localStorage.setItem("ordersCSV", updatedCSV)
+  localStorage.setItem("ordersCSV", updatedCSV);
 
   // ❌ Instead of marking submitted, REMOVE it
-  setPendingOrders(prev => {
-    const remaining = prev.filter(o => o.id !== orderId)
+  setPendingOrders((prev) => {
+    const remaining = prev.filter((o) => o.id !== orderId);
 
     if (remaining.length === 0) {
       const newOrder = {
@@ -150,17 +172,20 @@ const submitOrder = (orderId: number) => {
         cart: [],
         paymentMode: "Cash",
         isSubmitted: false,
-      }
-      setActiveOrderId(newOrder.id)
-      return [newOrder]
+      };
+      setActiveOrderId(newOrder.id);
+      return [newOrder];
     } else {
-      setActiveOrderId(remaining[0].id)
-      return remaining
+      setActiveOrderId(remaining[0].id);
+      return remaining;
     }
-  })
+  });
 
-  alert(`Order #${orderNumber} submitted successfully with ${order.paymentMode} payment!`)
-}
+  alert(
+    `Order #${orderNumber} submitted successfully with ${order.paymentMode} payment!`
+  );
+};
+
 
 
 
