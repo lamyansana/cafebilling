@@ -21,6 +21,8 @@ export const menuItems: MenuItem[] = [
   { id: 4, name: "Hot Chocolate (m)", price: 50, category: "Coffee & Hot Beverages" },
   { id: 5, name: "Masala Tea", price: 20, category: "Coffee & Hot Beverages" },
   { id: 6, name: "Ginger Green Tea", price: 30, category: "Coffee & Hot Beverages" },
+  { id: 24, name: "WATER HALF", price: 10, category: "Coffee & Hot Beverages" },
+  { id: 25, name: "WATER FULL", price: 20, category: "Coffee & Hot Beverages" },
 
   // 🧋 Cold Beverages
   { id: 7, name: "Coconut Coffee Mocha", price: 130, category: "Cold Beverages" },

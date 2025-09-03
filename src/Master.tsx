@@ -9,6 +9,7 @@ import SalesReport from "./SalesReport"
 import { menuItems } from "./CenterPane"
 import Toast from "./Toast"
 import ConfirmModal from "./ConfirmModal"
+import Expenditure from "./Expenditure"
 
 export interface MenuItem {
   id: number
@@ -242,6 +243,7 @@ function Master() {
               <Route path="/menu/*" element={<CenterPane addToCart={addToCart} />} />
               <Route path="/past-orders" element={<ViewPastOrders />} />
               <Route path="/sales-report" element={<SalesReport menuItems={menuItems} />} />
+              <Route path="/expenditure" element={<Expenditure />} />
             </Routes>
           </div>
 

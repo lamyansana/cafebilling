@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import type { MenuItem } from "./Master"
 
-
 interface SalesItem {
   name: string
   quantity: number
@@ -15,99 +14,116 @@ interface SalesReportProps {
 function SalesReport({ menuItems }: SalesReportProps) {
   const [report, setReport] = useState<SalesItem[]>([])
   const [overallTotal, setOverallTotal] = useState(0)
+  const [expenditureTotal, setExpenditureTotal] = useState(0)
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   )
   const [filter, setFilter] = useState<"day" | "week" | "month" | "year">("day")
 
-  const generateReport = (dateStr: string, filterType: string) => {
-    const csv = localStorage.getItem("ordersCSV")
-    if (!csv) {
-      setReport([])
-      setOverallTotal(0)
-      return
+  const matchesFilter = (date: Date, selected: Date, filterType: string) => {
+    if (filterType === "day") {
+      return date.toDateString() === selected.toDateString()
+    } else if (filterType === "week") {
+      const startOfWeek = new Date(selected)
+      startOfWeek.setDate(selected.getDate() - selected.getDay())
+      startOfWeek.setHours(0, 0, 0, 0)
+
+      const endOfWeek = new Date(startOfWeek)
+      endOfWeek.setDate(startOfWeek.getDate() + 6)
+      endOfWeek.setHours(23, 59, 59, 999)
+
+      return date >= startOfWeek && date <= endOfWeek
+    } else if (filterType === "month") {
+      return (
+        date.getMonth() === selected.getMonth() &&
+        date.getFullYear() === selected.getFullYear()
+      )
+    } else if (filterType === "year") {
+      return date.getFullYear() === selected.getFullYear()
     }
+    return false
+  }
 
-    const rows = csv.trim().split("\n")
-    const dataRows = rows.slice(1) // skip header row
+  const generateReport = (dateStr: string, filterType: string) => {
+    const selected = new Date(dateStr)
 
+    // ---------- SALES ----------
+    const csv = localStorage.getItem("ordersCSV")
     const itemMap: Record<string, SalesItem> = {}
     let grandTotal = 0
 
-    const selected = new Date(dateStr)
+    if (csv) {
+      const rows = csv.trim().split("\n").slice(1)
+      rows.forEach((row) => {
+        const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+        const dateTimeStr = cols[1]?.replace(/"/g, "").trim()
+        if (!dateTimeStr) return
 
-    dataRows.forEach((row) => {
-      const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
-      const dateTimeStr = cols[1]?.replace(/"/g, "").trim()
-      if (!dateTimeStr) return
+        const orderDate = new Date(dateTimeStr)
+        if (isNaN(orderDate.getTime())) return
+        if (!matchesFilter(orderDate, selected, filterType)) return
 
-      // ✅ Always parse ISO format reliably
-      const orderDate = new Date(dateTimeStr)
-      if (isNaN(orderDate.getTime())) return
+        const itemsStr = cols[2]?.replace(/"/g, "").trim() || ""
+        const total = parseFloat(cols[3] || "0")
+        grandTotal += total
 
-      // ✅ Apply filter
-      let include = false
-      if (filterType === "day") {
-        include = orderDate.toDateString() === selected.toDateString()
-      } else if (filterType === "week") {
-        const startOfWeek = new Date(selected)
-        startOfWeek.setDate(selected.getDate() - selected.getDay())
-        startOfWeek.setHours(0, 0, 0, 0)
+        itemsStr.split(";").forEach((part) => {
+          const [name, qtyStr] = part.split("x")
+          const itemName = name.trim()
+          const qty = parseInt(qtyStr?.trim() || "1", 10)
 
-        const endOfWeek = new Date(startOfWeek)
-        endOfWeek.setDate(startOfWeek.getDate() + 6)
-        endOfWeek.setHours(23, 59, 59, 999)
+          const menuItem = menuItems.find((m) => m.name === itemName)
+          const price = menuItem ? menuItem.price : 0
+          const amount = price * qty
 
-        include = orderDate >= startOfWeek && orderDate <= endOfWeek
-      } else if (filterType === "month") {
-        include =
-          orderDate.getMonth() === selected.getMonth() &&
-          orderDate.getFullYear() === selected.getFullYear()
-      } else if (filterType === "year") {
-        include = orderDate.getFullYear() === selected.getFullYear()
-      }
-
-      if (!include) return
-
-      const itemsStr = cols[2]?.replace(/"/g, "").trim() || ""
-      const total = parseFloat(cols[3] || "0")
-      grandTotal += total
-
-      itemsStr.split(";").forEach((part) => {
-        const [name, qtyStr] = part.split("x")
-        const itemName = name.trim()
-        const qty = parseInt(qtyStr?.trim() || "1", 10)
-
-        const menuItem = menuItems.find((m) => m.name === itemName)
-        const price = menuItem ? menuItem.price : 0
-        const amount = price * qty
-
-        if (!itemMap[itemName]) {
-          itemMap[itemName] = { name: itemName, quantity: 0, amount: 0 }
-        }
-        itemMap[itemName].quantity += qty
-        itemMap[itemName].amount += amount
+          if (!itemMap[itemName]) {
+            itemMap[itemName] = { name: itemName, quantity: 0, amount: 0 }
+          }
+          itemMap[itemName].quantity += qty
+          itemMap[itemName].amount += amount
+        })
       })
-    })
+    }
 
     setReport(Object.values(itemMap))
     setOverallTotal(grandTotal)
+
+    // ---------- EXPENDITURES ----------
+    const expCSV = localStorage.getItem("expendituresCSV")
+    let expTotal = 0
+
+    if (expCSV) {
+      const rows = expCSV.trim().split("\n").slice(1)
+      rows.forEach((row) => {
+        const [id, category, amount, dateStr] = row.split(",")
+        const expDate = new Date(dateStr)
+        if (!isNaN(expDate.getTime()) && matchesFilter(expDate, selected, filterType)) {
+          expTotal += parseFloat(amount || "0")
+        }
+      })
+    }
+
+    setExpenditureTotal(expTotal)
   }
 
   useEffect(() => {
     generateReport(selectedDate, filter)
   }, [selectedDate, filter])
 
-  // ✅ Export to CSV
+  const netProfit = overallTotal - expenditureTotal
+
+  // ✅ Export CSV
   const exportCSV = () => {
-    if (report.length === 0) return
+    if (report.length === 0 && overallTotal === 0 && expenditureTotal === 0) return
 
     let csvContent =
       "data:text/csv;charset=utf-8,Item,Quantity,Amount (₹)\n" +
       report
         .map((item) => `${item.name},${item.quantity},${item.amount.toFixed(2)}`)
         .join("\n") +
-      `\nGrand Total,,${overallTotal.toFixed(2)}`
+      `\nSales Total,,${overallTotal.toFixed(2)}` +
+      `\nExpenditure Total,,${expenditureTotal.toFixed(2)}` +
+      `\nNet Profit/Loss,,${netProfit.toFixed(2)}`
 
     const link = document.createElement("a")
     link.href = encodeURI(csvContent)
@@ -115,10 +131,8 @@ function SalesReport({ menuItems }: SalesReportProps) {
     link.click()
   }
 
-  // ✅ Export to PDF
+  // ✅ Export PDF
   const exportPDF = async () => {
-    if (report.length === 0) return
-
     const { jsPDF } = await import("jspdf")
     const doc = new jsPDF()
 
@@ -144,7 +158,11 @@ function SalesReport({ menuItems }: SalesReportProps) {
 
     y += 10
     doc.setFontSize(14)
-    doc.text(`Grand Total: ₹${overallTotal.toFixed(2)}`, 14, y)
+    doc.text(`Sales Total: ₹${overallTotal.toFixed(2)}`, 14, y)
+    y += 8
+    doc.text(`Expenditure Total: ₹${expenditureTotal.toFixed(2)}`, 14, y)
+    y += 8
+    doc.text(`Net Profit/Loss: ₹${netProfit.toFixed(2)}`, 14, y)
 
     doc.save(`sales_report_${filter}_${selectedDate}.pdf`)
   }
@@ -200,9 +218,9 @@ function SalesReport({ menuItems }: SalesReportProps) {
         </table>
       )}
 
-      <h3>
-        Grand Total ({filter}): ₹{overallTotal.toFixed(2)}
-      </h3>
+      <h3>Sales Total ({filter}): ₹{overallTotal.toFixed(2)}</h3>
+      <h3>Expenditure Total ({filter}): ₹{expenditureTotal.toFixed(2)}</h3>
+      <h3>Net Profit/Loss: ₹{netProfit.toFixed(2)}</h3>
     </div>
   )
 }

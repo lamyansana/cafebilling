@@ -46,6 +46,14 @@ const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen }) => {
             >
               Sales Report
             </NavLink>
+            <NavLink
+              to="/expenditure"
+              className={({ isActive }) =>
+                isActive ? "active-link" : "inactive-link"
+              }
+            >
+              Expenditure
+            </NavLink>
 
             <button className="disabled-btn" disabled>
               Orders (coming soon)

@@ -436,3 +436,78 @@
     color: #fff;
   }
 
+/* Light theme defaults */
+.expenditure-page {
+  color: #222;
+  background: #fff;
+}
+
+.expenditure-page table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fafafa;
+  color: #222;
+}
+
+.expenditure-page th,
+.expenditure-page td {
+  border: 1px solid #ccc;
+  padding: 8px;
+}
+
+/* Dark theme overrides */
+@media (prefers-color-scheme: dark) {
+  .expenditure-page {
+    background: #121212;
+    color: #eee;
+  }
+
+  .expenditure-page table {
+    background: #1e1e1e;
+    color: #eee;
+  }
+
+  .expenditure-page th,
+  .expenditure-page td {
+    border: 1px solid #444;
+  }
+
+  .expenditure-page input,
+  .expenditure-page button {
+    background: #222;
+    color: #eee;
+    border: 1px solid #555;
+  }
+
+  .expenditure-page button:hover {
+    background: #333;
+  }
+}
+
+
+/* Common primary button style */
+.primary-btn {
+  background-color: #007bff; /* Bootstrap blue */
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.primary-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Dark theme override */
+@media (prefers-color-scheme: dark) {
+  .primary-btn {
+    background-color: #0d6efd;
+    color: #fff;
+  }
+
+  .primary-btn:hover {
+    background-color: #0b5ed7;
+  }
+}
