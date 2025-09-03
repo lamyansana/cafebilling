@@ -44,12 +44,13 @@ function RightPane({
               gap: "6px",
               padding: "6px 10px",
               borderRadius: "6px",
+              color: "#ffffffff",
               border:
                 activeOrderId === order.id
                   ? "2px solid #007bff"
-                  : "1px solid #ccc",
+                  : "1px solid #d8dbcfff",
               background:
-                activeOrderId === order.id ? "#e7f1ff" : "#f9f9f9",
+                activeOrderId === order.id ? "#06595eff" : "#6d6777ff",
             }}
           >
             {/* Order Name - switch when clicked */}
