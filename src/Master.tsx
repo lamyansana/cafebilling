@@ -7,7 +7,7 @@ import RightPane from "./RightPane"
 import ViewPastOrders from "./ViewPastOrders"
 import SalesReport from "./SalesReport"
 import { menuItems } from "./CenterPane"
-import Toast from "./toast"
+import Toast from "./Toast"
 import ConfirmModal from "./ConfirmModal"
 
 export interface MenuItem {
