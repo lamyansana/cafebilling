@@ -415,4 +415,24 @@
   }
 }
 
+  /* Menu cards dark mode */
+  .menu-card {
+    background: #2a2a2a;
+    border-color: #444;
+    color: #f5f5f5;
+  }
+
+  .menu-card h4 {
+    color: #fff;
+  }
+
+  .menu-card button {
+    background: #42a5f5;
+    color: #000;
+  }
+
+  .menu-card button:hover {
+    background: #1e88e5;
+    color: #fff;
+  }
 
