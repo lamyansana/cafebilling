@@ -322,49 +322,6 @@
 
 
 /* ---------- MOBILE RESPONSIVE ---------- */
-@media (max-width: 768px) {
-  /* Left pane becomes off-canvas */
- .left-pane {
-    position: fixed; /* so it overlays content */
-    top: 0;
-    left: 0;
-    height: 100%;
-    z-index: 1000;
-    transition: transform 0.3s ease;
-  }
-
-  .left-pane.open {
-    transform: translateX(0);
-  }
-
-  .left-pane.collapsed {
-    transform: translateX(-100%); /* fully hidden */
-  }
-
-  /* Floating toggle button always visible */
-  .toggle-btn {
-    position: fixed;  /* instead of absolute */
-    top: 10px;
-    left: 10px;
-    z-index: 1101;   /* higher than left-pane */
-    background: #007bff;
-    color: white;
-    border-radius: 6px;
-    padding: 6px 10px;
-  }
-}
-
- /* Right pane shrinks */
-  .right-pane {
-    width: 200px;
-    min-width: 180px;
-    max-width: 200px;
-  }
-
-  /* Center pane takes remaining space */
-  .center-pane-wrapper {
-    width: calc(100% - 200px);
-  }
 
 
 /* ---------- DARK MODE SUPPORT ---------- */
