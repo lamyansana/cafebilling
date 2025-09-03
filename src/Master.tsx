@@ -7,9 +7,8 @@ import RightPane from "./RightPane"
 import ViewPastOrders from "./ViewPastOrders"
 import SalesReport from "./SalesReport"
 import { menuItems } from "./CenterPane"
-
-
-
+import Toast from "./toast"
+import ConfirmModal from "./ConfirmModal"
 
 export interface MenuItem {
   id: number
@@ -35,12 +34,17 @@ function Master() {
     { id: Date.now(), name: "Order 1", cart: [], paymentMode: "Cash", isSubmitted: false }
   ])
   const [activeOrderId, setActiveOrderId] = useState<number | null>(
-  pendingOrders.length > 0 ? pendingOrders[0].id : null
-);
+    pendingOrders.length > 0 ? pendingOrders[0].id : null
+  )
   
-  //const activeOrder = pendingOrders.find(o => o.id === activeOrderId)!
-
+  const [toast, setToast] = useState<string | null>(null)
   const [isLeftOpen, setIsLeftOpen] = useState(true)
+
+  // ✅ New state for confirmation modal
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean
+    orderId: number | null
+  }>({ isOpen: false, orderId: null })
 
   // ➕ Create new order tab
   const addNewOrder = () => {
@@ -55,26 +59,48 @@ function Master() {
     setActiveOrderId(newOrder.id)
   }
 
+  // ❌ Delete order with confirmation if it has items
   const deleteOrder = (id: number) => {
-  setPendingOrders(prevOrders => {
-    const updatedOrders = prevOrders.filter(order => order.id !== id);
+    const order = pendingOrders.find(o => o.id === id)
 
-    // If the deleted order was active
-    if (activeOrderId === id) {
-      if (updatedOrders.length > 0) {
-        // pick the first order in the updated list
-        setActiveOrderId(updatedOrders[0].id);
-      } else {
-        // no orders left
-        setActiveOrderId(null);
-      }
+    if (order && order.cart.length > 0) {
+      // open confirmation modal
+      setConfirmModal({ isOpen: true, orderId: id })
+      return
     }
 
-    return updatedOrders;
-  });
-};
+    // otherwise delete directly
+    actuallyDeleteOrder(id)
+  }
 
+  const actuallyDeleteOrder = (id: number) => {
+    setPendingOrders(prevOrders => {
+      const updatedOrders = prevOrders.filter(order => order.id !== id)
 
+      // If the deleted order was active
+      if (activeOrderId === id) {
+        if (updatedOrders.length > 0) {
+          setActiveOrderId(updatedOrders[0].id)
+        } else {
+          // no orders left → always create new one
+          const newOrder = {
+            id: Date.now(),
+            name: "Order 1",
+            cart: [],
+            paymentMode: "Cash",
+            isSubmitted: false,
+          }
+          setActiveOrderId(newOrder.id)
+          return [newOrder]
+        }
+      }
+
+      return updatedOrders
+    })
+
+    setConfirmModal({ isOpen: false, orderId: null })
+    setToast("Order deleted successfully ✅")
+  }
 
   const switchOrder = (id: number) => setActiveOrderId(id)
 
@@ -136,130 +162,117 @@ function Master() {
     )
   }
 
- // ✅ Submit individual order
-// ✅ Submit individual order
-const submitOrder = (orderId: number) => {
-  const order = pendingOrders.find((o) => o.id === orderId);
-  if (!order || order.cart.length === 0) return;
+  // ✅ Submit individual order
+  const submitOrder = (orderId: number) => {
+    const order = pendingOrders.find(o => o.id === orderId)
+    if (!order || order.cart.length === 0) return
 
-  // 🔹 Ensure localStorage is safe (only in browser)
-  if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return
 
-  const existingCSV = localStorage.getItem("ordersCSV");
-  let orderNumber = 1; // default
+    const existingCSV = localStorage.getItem("ordersCSV")
+    let orderNumber = 1
 
-  if (existingCSV) {
-    const rows = existingCSV.trim().split("\n").slice(1); // skip header
-    const todayStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    if (existingCSV) {
+      const rows = existingCSV.trim().split("\n").slice(1)
+      const todayStr = new Date().toISOString().split("T")[0]
 
-    // Filter only today's rows (safely)
-    const todaysOrders = rows.filter((row) => {
-      const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-      if (cols.length < 2) return false;
-      const dateStr = cols[1].replace(/"/g, "").trim();
-      if (!dateStr) return false;
+      const todaysOrders = rows.filter(row => {
+        const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+        if (cols.length < 2) return false
+        const dateStr = cols[1].replace(/"/g, "").trim()
+        if (!dateStr) return false
 
-      const rowDate = new Date(dateStr);
-      if (isNaN(rowDate.getTime())) return false; // invalid date
+        const rowDate = new Date(dateStr)
+        if (isNaN(rowDate.getTime())) return false
 
-      return rowDate.toISOString().split("T")[0] === todayStr;
-    });
+        return rowDate.toISOString().split("T")[0] === todayStr
+      })
 
-    orderNumber = todaysOrders.length + 1;
-  }
-
-  const timestamp = new Date().toISOString();
-  const itemsString = order.cart
-    .map((ci) => `${ci.name} x${ci.quantity}`)
-    .join("; ");
-  const total = order.cart.reduce(
-    (sum, ci) => sum + ci.price * ci.quantity,
-    0
-  );
-
-  const newRow = `${orderNumber}, "${timestamp}", "${itemsString}", ${total}, ${order.paymentMode}\n`;
-
-  let updatedCSV = "";
-  if (!existingCSV) {
-    updatedCSV =
-      "OrderNumber, DateTime, Items, Total, PaymentMode\n" + newRow;
-  } else {
-    updatedCSV = existingCSV + newRow;
-  }
-
-  localStorage.setItem("ordersCSV", updatedCSV);
-
-  // ❌ Instead of marking submitted, REMOVE it
-  setPendingOrders((prev) => {
-    const remaining = prev.filter((o) => o.id !== orderId);
-
-    if (remaining.length === 0) {
-      const newOrder = {
-        id: Date.now(),
-        name: "Order 1",
-        cart: [],
-        paymentMode: "Cash",
-        isSubmitted: false,
-      };
-      setActiveOrderId(newOrder.id);
-      return [newOrder];
-    } else {
-      setActiveOrderId(remaining[0].id);
-      return remaining;
+      orderNumber = todaysOrders.length + 1
     }
-  });
 
-  alert(
-    `Order #${orderNumber} submitted successfully with ${order.paymentMode} payment!`
-  );
-};
+    const timestamp = new Date().toISOString()
+    const itemsString = order.cart.map(ci => `${ci.name} x${ci.quantity}`).join("; ")
+    const total = order.cart.reduce((sum, ci) => sum + ci.price * ci.quantity, 0)
 
+    const newRow = `${orderNumber}, "${timestamp}", "${itemsString}", ${total}, ${order.paymentMode}\n`
 
+    let updatedCSV = ""
+    if (!existingCSV) {
+      updatedCSV = "OrderNumber, DateTime, Items, Total, PaymentMode\n" + newRow
+    } else {
+      updatedCSV = existingCSV + newRow
+    }
 
+    localStorage.setItem("ordersCSV", updatedCSV)
+
+    setPendingOrders(prev => {
+      const remaining = prev.filter(o => o.id !== orderId)
+
+      if (remaining.length === 0) {
+        const newOrder = {
+          id: Date.now(),
+          name: "Order 1",
+          cart: [],
+          paymentMode: "Cash",
+          isSubmitted: false,
+        }
+        setActiveOrderId(newOrder.id)
+        return [newOrder]
+      } else {
+        setActiveOrderId(remaining[0].id)
+        return remaining
+      }
+    })
+
+    setToast(`Order #${orderNumber} submitted successfully with ${order.paymentMode} payment!`)
+  }
 
   return (
-  <BrowserRouter>
-  <div className="container">
-    {/* Left Pane */}
-    <LeftPane isOpen={isLeftOpen} setIsOpen={setIsLeftOpen} />
+    <BrowserRouter>
+      <div className="container">
+        {/* Left Pane */}
+        <LeftPane isOpen={isLeftOpen} setIsOpen={setIsLeftOpen} />
 
-    {/* Center + Right */}
-    <div
-      className="center-right"
-      style={{
-        display: "flex",
-        flexGrow: 1,
-        transition: "all 0.3s",
-      }}
-    >
-      {/* Center Pane */}
-      <div className="center-pane-wrapper" style={{ flexGrow: 1 }}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/menu/maggi-and-noodles" replace />} />
-          <Route path="/menu/*" element={<CenterPane addToCart={addToCart} />} />
-          <Route path="/past-orders" element={<ViewPastOrders />} />
-          <Route path="/sales-report" element={<SalesReport menuItems={menuItems} />} />
-        </Routes>
+        {/* Center + Right */}
+        <div className="center-right" style={{ display: "flex", flexGrow: 1, transition: "all 0.3s" }}>
+          <div className="center-pane-wrapper" style={{ flexGrow: 1 }}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/menu/maggi-and-noodles" replace />} />
+              <Route path="/menu/*" element={<CenterPane addToCart={addToCart} />} />
+              <Route path="/past-orders" element={<ViewPastOrders />} />
+              <Route path="/sales-report" element={<SalesReport menuItems={menuItems} />} />
+            </Routes>
+          </div>
+
+          {/* Right Pane */}
+          <RightPane
+            orders={pendingOrders}
+            activeOrderId={activeOrderId}
+            setActiveOrderId={setActiveOrderId}
+            switchOrder={switchOrder}
+            addNewOrder={addNewOrder}
+            incrementQuantity={incrementQuantity}
+            decrementQuantity={decrementQuantity}
+            setPaymentMode={setPaymentMode}
+            submitOrder={submitOrder}
+            deleteOrder={deleteOrder}
+          />
+        </div>
       </div>
 
-      {/* Right Pane */}
-      <RightPane
-        orders={pendingOrders}
-        activeOrderId={activeOrderId}
-        setActiveOrderId={setActiveOrderId}
-        switchOrder={switchOrder}
-        addNewOrder={addNewOrder}
-        incrementQuantity={incrementQuantity}
-        decrementQuantity={decrementQuantity}
-        setPaymentMode={setPaymentMode}
-        submitOrder={submitOrder}
-        deleteOrder={deleteOrder}
-      />
-    </div>
-  </div>
-</BrowserRouter>
+      {/* ✅ Toast Notification */}
+      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
 
-)
+      {/* ✅ Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        message="This order has items. Are you sure you want to delete it?"
+        onConfirm={() => confirmModal.orderId && actuallyDeleteOrder(confirmModal.orderId)}
+        onCancel={() => setConfirmModal({ isOpen: false, orderId: null })}
+      />
+    </BrowserRouter>
+  )
 }
 
 export default Master

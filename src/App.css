@@ -90,6 +90,7 @@
 
 
 
+
 .center-pane {
   flex: 1;
   background-color: #fff;
@@ -112,7 +113,7 @@
 .right-pane {
   padding: 12px;
   border-left: 1px solid #ccc;
-  width: 350px;
+  width: 500px;
   background-color: #f9f9f9;
   display: flex;
   flex-direction: column;
@@ -323,8 +324,8 @@
 /* ---------- MOBILE RESPONSIVE ---------- */
 @media (max-width: 768px) {
   /* Left pane becomes off-canvas */
-  .left-pane {
-    position: absolute;
+ .left-pane {
+    position: fixed; /* so it overlays content */
     top: 0;
     left: 0;
     height: 100%;
@@ -338,10 +339,22 @@
 
   .left-pane.collapsed {
     transform: translateX(-100%); /* fully hidden */
-    width: 200px; /* keep natural width */
   }
 
-  /* Right pane shrinks */
+  /* Floating toggle button always visible */
+  .toggle-btn {
+    position: fixed;  /* instead of absolute */
+    top: 10px;
+    left: 10px;
+    z-index: 1101;   /* higher than left-pane */
+    background: #007bff;
+    color: white;
+    border-radius: 6px;
+    padding: 6px 10px;
+  }
+}
+
+ /* Right pane shrinks */
   .right-pane {
     width: 200px;
     min-width: 180px;
@@ -353,14 +366,6 @@
     width: calc(100% - 200px);
   }
 
-  /* Optional: floating toggle button always visible */
-  .toggle-btn {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 1100;
-  }
-}
 
 /* ---------- DARK MODE SUPPORT ---------- */
 @media (prefers-color-scheme: dark) {

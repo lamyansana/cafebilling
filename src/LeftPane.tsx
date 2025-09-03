@@ -10,8 +10,11 @@ interface LeftPaneProps {
 const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen }) => {
   return (
     <div className={`left-pane ${isOpen ? "open" : "collapsed"}`}>
-      {/* Toggle button */}
-      <button className="toggle-btn" onClick={() => setIsOpen(!isOpen)}>
+      {/* ✅ Toggle button - always visible */}
+      <button
+        className="toggle-btn"
+        onClick={() => setIsOpen(!isOpen)}
+      >
         {isOpen ? "«" : "☰"}
       </button>
 
@@ -53,6 +56,5 @@ const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen }) => {
     </div>
   )
 }
-
 
 export default LeftPane
