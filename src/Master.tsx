@@ -193,7 +193,10 @@ function Master() {
     }
 
     const timestamp = new Date().toISOString()
-    const itemsString = order.cart.map(ci => `${ci.name} x${ci.quantity}`).join("; ")
+    const itemsString = order.cart
+  .map(ci => `${ci.name} x${ci.quantity} ₹${ci.price}`)
+  .join("; ")
+
     const total = order.cart.reduce((sum, ci) => sum + ci.price * ci.quantity, 0)
 
     const newRow = `${orderNumber}, "${timestamp}", "${itemsString}", ${total}, ${order.paymentMode}\n`

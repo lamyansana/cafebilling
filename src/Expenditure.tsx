@@ -4,6 +4,9 @@ import jsPDF from "jspdf"
 interface Expense {
   id: number
   category: string
+  item: string
+  rate: number
+  quantity: number
   amount: number
   date: string
   notes: string
@@ -24,6 +27,9 @@ const Expenditure: React.FC = () => {
 
   const [form, setForm] = useState({
     category: "",
+    item: "",
+    rate: "",
+    quantity: "1",
     amount: "",
     date: getToday(),
     notes: "",
@@ -39,6 +45,9 @@ const Expenditure: React.FC = () => {
       return {
         id: index + 1,
         category: obj.category,
+        item: obj.item,
+        rate: parseFloat(obj.rate),
+        quantity: parseFloat(obj.quantity),
         amount: parseFloat(obj.amount),
         date: obj.date,
         notes: obj.notes || "",
@@ -47,10 +56,10 @@ const Expenditure: React.FC = () => {
   }
 
   const toCSV = (data: Expense[]): string => {
-    const headers = "id,category,amount,date,notes"
+    const headers = "id,category,item,rate,quantity,amount,date,notes"
     const rows = data.map(
       (exp) =>
-        `${exp.id},${exp.category},${exp.amount},${exp.date},${exp.notes || ""}`
+        `${exp.id},${exp.category},${exp.item},${exp.rate},${exp.quantity},${exp.amount},${exp.date},${exp.notes || ""}`
     )
     return [headers, ...rows].join("\n")
   }
@@ -101,25 +110,53 @@ const Expenditure: React.FC = () => {
     setFilteredExpenses(filtered)
   }, [expenses, selectedDate, filter])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target
+    let updatedForm = { ...form, [name]: value }
+
+    if (name === "rate" || name === "quantity") {
+      const rate = parseFloat(
+        name === "rate" ? value : updatedForm.rate || "0"
+      )
+      const qty = parseFloat(
+        name === "quantity" ? value : updatedForm.quantity || "0"
+      )
+      if (!isNaN(rate) && !isNaN(qty)) {
+        updatedForm.amount = (rate * qty).toFixed(2)
+      }
+    }
+
+    setForm(updatedForm)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.category || !form.amount || !form.date) {
+    if (!form.category || !form.item || !form.rate || !form.quantity) {
       alert("Please fill in all required fields")
       return
     }
     const newExpense: Expense = {
       id: expenses.length + 1,
       category: form.category,
+      item: form.item,
+      rate: parseFloat(form.rate),
+      quantity: parseFloat(form.quantity),
       amount: parseFloat(form.amount),
       date: form.date,
       notes: form.notes,
     }
     setExpenses([...expenses, newExpense])
-    setForm({ category: "", amount: "", date: getToday(), notes: "" })
+    setForm({
+      category: "",
+      item: "",
+      rate: "",
+      quantity: "1",
+      amount: "",
+      date: getToday(),
+      notes: "",
+    })
   }
 
   const total = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0)
@@ -150,18 +187,22 @@ const Expenditure: React.FC = () => {
     let y = 50
     doc.setFontSize(10)
     doc.text("ID", 14, y)
-    doc.text("Category", 30, y)
-    doc.text("Amount (₹)", 90, y)
-    doc.text("Date", 130, y)
-    doc.text("Notes", 160, y)
+    doc.text("Category", 25, y)
+    doc.text("Item", 60, y)
+    doc.text("Rate", 100, y)
+    doc.text("Qty", 120, y)
+    doc.text("Amount", 140, y)
+    doc.text("Date", 170, y)
     y += 10
 
     filteredExpenses.forEach((exp) => {
       doc.text(exp.id.toString(), 14, y)
-      doc.text(exp.category, 30, y)
-      doc.text(exp.amount.toFixed(2), 90, y)
-      doc.text(exp.date, 130, y)
-      doc.text(exp.notes || "", 160, y)
+      doc.text(exp.category, 25, y)
+      doc.text(exp.item, 60, y)
+      doc.text(exp.rate.toFixed(2), 100, y)
+      doc.text(exp.quantity.toString(), 120, y)
+      doc.text(exp.amount.toFixed(2), 140, y)
+      doc.text(exp.date, 170, y)
       y += 8
       if (y > pageHeight - 20) {
         doc.addPage()
@@ -202,25 +243,56 @@ const Expenditure: React.FC = () => {
         style={{
           display: "grid",
           gap: "10px",
-          maxWidth: "400px",
+          maxWidth: "600px",
           marginBottom: "20px",
         }}
       >
+        <select
+          name="category"
+          value={form.category}
+          onChange={handleChange}
+          required
+        >
+          <option value="">Select Category</option>
+          <option value="Veg">Veg</option>
+          <option value="Meat">Meat</option>
+          <option value="Grocery">Grocery</option>
+          <option value="Coffee">Coffee</option>
+          <option value="Whitener">Whitener</option>
+          <option value="Rent">Rent</option>
+          <option value="Utilities">Utilities</option>
+          <option value="Misc">Misc</option>
+        </select>
         <input
           type="text"
-          name="category"
-          placeholder="Category (e.g., Veg, Meat, Grocery, Coffee, Whitener)"
-          value={form.category}
+          name="item"
+          placeholder="Item (e.g., Milk, Sugar)"
+          value={form.item}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="number"
+          name="rate"
+          placeholder="Rate (₹)"
+          value={form.rate}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="number"
+          name="quantity"
+          placeholder="Quantity"
+          value={form.quantity}
           onChange={handleChange}
           required
         />
         <input
           type="number"
           name="amount"
-          placeholder="Amount"
+          placeholder="Amount (auto)"
           value={form.amount}
-          onChange={handleChange}
-          required
+          readOnly
         />
         <input
           type="date"
@@ -236,7 +308,9 @@ const Expenditure: React.FC = () => {
           value={form.notes}
           onChange={handleChange}
         />
-        <button type="submit" className="primary-btn" >Add Expense</button>
+        <button type="submit" className="primary-btn">
+          Add Expense
+        </button>
       </form>
 
       {/* Export Buttons */}
@@ -253,6 +327,9 @@ const Expenditure: React.FC = () => {
           <tr>
             <th>ID</th>
             <th>Category</th>
+            <th>Item</th>
+            <th>Rate (₹)</th>
+            <th>Qty</th>
             <th>Amount (₹)</th>
             <th>Date</th>
             <th>Notes</th>
@@ -261,7 +338,7 @@ const Expenditure: React.FC = () => {
         <tbody>
           {filteredExpenses.length === 0 ? (
             <tr>
-              <td colSpan={5} style={{ textAlign: "center" }}>
+              <td colSpan={8} style={{ textAlign: "center" }}>
                 No expenses recorded
               </td>
             </tr>
@@ -270,6 +347,9 @@ const Expenditure: React.FC = () => {
               <tr key={exp.id}>
                 <td>{exp.id}</td>
                 <td>{exp.category}</td>
+                <td>{exp.item}</td>
+                <td>{exp.rate.toFixed(2)}</td>
+                <td>{exp.quantity}</td>
                 <td>{exp.amount.toFixed(2)}</td>
                 <td>{exp.date}</td>
                 <td>{exp.notes}</td>
@@ -278,7 +358,7 @@ const Expenditure: React.FC = () => {
           )}
           {filteredExpenses.length > 0 && (
             <tr style={{ fontWeight: "bold" }}>
-              <td colSpan={2}>Total</td>
+              <td colSpan={5}>Total</td>
               <td>{total.toFixed(2)}</td>
               <td colSpan={2}></td>
             </tr>

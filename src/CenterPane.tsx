@@ -1,4 +1,5 @@
 import { Routes, Route, NavLink, Navigate } from "react-router-dom";
+import { useState } from "react";
 import type { MenuItem } from "./Master";
 
 interface CenterPaneProps {
@@ -9,9 +10,9 @@ interface CenterPaneProps {
 const slugify = (str: string) =>
   str
     .toLowerCase()
-    .replace(/&/g, "and")       // replace &
-    .replace(/\s+/g, "-")       // replace spaces
-    .replace(/[^\w-]+/g, "");   // remove non-word chars
+    .replace(/&/g, "and") // replace &
+    .replace(/\s+/g, "-") // replace spaces
+    .replace(/[^\w-]+/g, ""); // remove non-word chars
 
 export const menuItems: MenuItem[] = [
   // ☕ Coffee & Hot Beverages
@@ -55,56 +56,109 @@ export const menuItems: MenuItem[] = [
 function CenterPane({ addToCart }: CenterPaneProps) {
   const categories = Array.from(new Set(menuItems.map((item) => item.category)));
 
+  const [customItem, setCustomItem] = useState({ name: "", price: "", category: "" });
+
+  const handleCustomSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customItem.name || !customItem.price) {
+      alert("Please enter item name and price");
+      return;
+    }
+    const newItem: MenuItem = {
+      id: Date.now(), // unique id
+      name: customItem.name,
+      price: parseFloat(customItem.price),
+      category: customItem.category || "Custom",
+    };
+    addToCart(newItem);
+    setCustomItem({ name: "", price: "", category: "" });
+  };
+
   return (
     <div className="center-pane">
       <h2>Menu</h2>
 
       {/* Navigation */}
       <nav className="menu-nav">
-  {categories.map((cat) => {
-    const slug = slugify(cat);
-    return (
-      <NavLink
-        key={cat}
-        to={`/menu/${slug}`}  // Absolute path is fine
-        className={({ isActive }) => `menu-link ${isActive ? "active" : ""}`}
-      >
-        {cat}
-      </NavLink>
-    );
-  })}
-</nav>
-
+        {categories.map((cat) => {
+          const slug = slugify(cat);
+          return (
+            <NavLink
+              key={cat}
+              to={`/menu/${slug}`}
+              className={({ isActive }) => `menu-link ${isActive ? "active" : ""}`}
+            >
+              {cat}
+            </NavLink>
+          );
+        })}
+        <NavLink
+          to="/menu/custom"
+          className={({ isActive }) => `menu-link ${isActive ? "active" : ""}`}
+        >
+          ➕ Custom Item
+        </NavLink>
+      </nav>
 
       {/* Routes */}
       <Routes>
-  {/* Redirect /menu → Maggi & Noodles */}
-  <Route index element={<Navigate to={slugify("Maggi & Noodles")} replace />} />
+        {/* Redirect /menu → Maggi & Noodles */}
+        <Route index element={<Navigate to={slugify("Maggi & Noodles")} replace />} />
 
-  {categories.map((cat) => {
-    const slug = slugify(cat);
-    const items = menuItems.filter((i) => i.category === cat);
+        {categories.map((cat) => {
+          const slug = slugify(cat);
+          const items = menuItems.filter((i) => i.category === cat);
 
-    return (
-      <Route
-        key={cat}
-        path={slug} // RELATIVE path
-        element={
-          <div className="menu-grid">
-            {items.map((item) => (
-              <div key={item.id} className="menu-card">
-                <h4>{item.name}</h4>
-                <p>₹{item.price}</p>
-                <button onClick={() => addToCart(item)}>Add to Cart</button>
-              </div>
-            ))}
-          </div>
-        }
-      />
-    );
-  })}
-</Routes>
+          return (
+            <Route
+              key={cat}
+              path={slug}
+              element={
+                <div className="menu-grid">
+                  {items.map((item) => (
+                    <div key={item.id} className="menu-card">
+                      <h4>{item.name}</h4>
+                      <p>₹{item.price}</p>
+                      <button onClick={() => addToCart(item)}>Add to Cart</button>
+                    </div>
+                  ))}
+                </div>
+              }
+            />
+          );
+        })}
 
+        {/* Custom Item Page */}
+        <Route
+          path="custom"
+          element={
+            <form className="custom-item-form" onSubmit={handleCustomSubmit}>
+              <h3>Add Custom Item</h3>
+              <input
+                type="text"
+                placeholder="Item Name"
+                value={customItem.name}
+                onChange={(e) => setCustomItem({ ...customItem, name: e.target.value })}
+                required
+              />
+              <input
+                type="number"
+                placeholder="Price (₹)"
+                value={customItem.price}
+                onChange={(e) => setCustomItem({ ...customItem, price: e.target.value })}
+                required
+              />
+              <input
+                type="text"
+                placeholder="Notes (optional)"
+                value={customItem.category}
+                onChange={(e) => setCustomItem({ ...customItem, category: e.target.value })}
+              />
+              <button type="submit">Add to Cart</button>
+            </form>
+          }
+        />
+      </Routes>
     </div>
   );
 }

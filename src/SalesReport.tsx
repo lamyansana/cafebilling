@@ -15,39 +15,20 @@ function SalesReport({ menuItems }: SalesReportProps) {
   const [report, setReport] = useState<SalesItem[]>([])
   const [overallTotal, setOverallTotal] = useState(0)
   const [expenditureTotal, setExpenditureTotal] = useState(0)
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  )
-  const [filter, setFilter] = useState<"day" | "week" | "month" | "year">("day")
 
-  const matchesFilter = (date: Date, selected: Date, filterType: string) => {
-    if (filterType === "day") {
-      return date.toDateString() === selected.toDateString()
-    } else if (filterType === "week") {
-      const startOfWeek = new Date(selected)
-      startOfWeek.setDate(selected.getDate() - selected.getDay())
-      startOfWeek.setHours(0, 0, 0, 0)
+  const todayStr = new Date().toISOString().split("T")[0]
+  const [startDate, setStartDate] = useState(todayStr)
+  const [endDate, setEndDate] = useState(todayStr)
 
-      const endOfWeek = new Date(startOfWeek)
-      endOfWeek.setDate(startOfWeek.getDate() + 6)
-      endOfWeek.setHours(23, 59, 59, 999)
-
-      return date >= startOfWeek && date <= endOfWeek
-    } else if (filterType === "month") {
-      return (
-        date.getMonth() === selected.getMonth() &&
-        date.getFullYear() === selected.getFullYear()
-      )
-    } else if (filterType === "year") {
-      return date.getFullYear() === selected.getFullYear()
-    }
-    return false
+  const isInRange = (date: Date, start: Date, end: Date) => {
+    return date >= start && date <= end
   }
 
-  const generateReport = (dateStr: string, filterType: string) => {
-    const selected = new Date(dateStr)
+  const generateReport = (startStr: string, endStr: string) => {
+    const start = new Date(startStr)
+    const end = new Date(endStr)
+    end.setHours(23, 59, 59, 999)
 
-    // ---------- SALES ----------
     const csv = localStorage.getItem("ordersCSV")
     const itemMap: Record<string, SalesItem> = {}
     let grandTotal = 0
@@ -61,7 +42,7 @@ function SalesReport({ menuItems }: SalesReportProps) {
 
         const orderDate = new Date(dateTimeStr)
         if (isNaN(orderDate.getTime())) return
-        if (!matchesFilter(orderDate, selected, filterType)) return
+        if (!isInRange(orderDate, start, end)) return
 
         const itemsStr = cols[2]?.replace(/"/g, "").trim() || ""
         const total = parseFloat(cols[3] || "0")
@@ -88,7 +69,6 @@ function SalesReport({ menuItems }: SalesReportProps) {
     setReport(Object.values(itemMap))
     setOverallTotal(grandTotal)
 
-    // ---------- EXPENDITURES ----------
     const expCSV = localStorage.getItem("expendituresCSV")
     let expTotal = 0
 
@@ -97,7 +77,7 @@ function SalesReport({ menuItems }: SalesReportProps) {
       rows.forEach((row) => {
         const [id, category, amount, dateStr] = row.split(",")
         const expDate = new Date(dateStr)
-        if (!isNaN(expDate.getTime()) && matchesFilter(expDate, selected, filterType)) {
+        if (!isNaN(expDate.getTime()) && isInRange(expDate, start, end)) {
           expTotal += parseFloat(amount || "0")
         }
       })
@@ -107,8 +87,8 @@ function SalesReport({ menuItems }: SalesReportProps) {
   }
 
   useEffect(() => {
-    generateReport(selectedDate, filter)
-  }, [selectedDate, filter])
+    generateReport(startDate, endDate)
+  }, [startDate, endDate])
 
   const netProfit = overallTotal - expenditureTotal
 
@@ -127,7 +107,7 @@ function SalesReport({ menuItems }: SalesReportProps) {
 
     const link = document.createElement("a")
     link.href = encodeURI(csvContent)
-    link.download = `sales_report_${filter}_${selectedDate}.csv`
+    link.download = `sales_report_${startDate}_to_${endDate}.csv`
     link.click()
   }
 
@@ -140,8 +120,8 @@ function SalesReport({ menuItems }: SalesReportProps) {
     doc.text("Sales Report", 14, 20)
 
     doc.setFontSize(12)
-    doc.text(`Filter: ${filter}`, 14, 30)
-    doc.text(`Date: ${selectedDate}`, 14, 36)
+    doc.text(`From: ${startDate}`, 14, 30)
+    doc.text(`To: ${endDate}`, 100, 30)
 
     let y = 50
     doc.text("Item", 14, y)
@@ -164,39 +144,97 @@ function SalesReport({ menuItems }: SalesReportProps) {
     y += 8
     doc.text(`Net Profit/Loss: ₹${netProfit.toFixed(2)}`, 14, y)
 
-    doc.save(`sales_report_${filter}_${selectedDate}.pdf`)
+    doc.save(`sales_report_${startDate}_to_${endDate}.pdf`)
+  }
+
+  // ✅ Print option
+  const printReport = () => {
+    const printWindow = window.open("", "_blank")
+    if (!printWindow) return
+
+    const reportHTML = `
+      <html>
+        <head>
+          <title>Sales Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+            th { background: #f2f2f2; }
+            h2, h3 { margin: 5px 0; }
+          </style>
+        </head>
+        <body>
+          <h2>📊 Sales Report</h2>
+          <p><b>From:</b> ${startDate} &nbsp;&nbsp; <b>To:</b> ${endDate}</p>
+
+          ${
+            report.length === 0
+              ? "<p>No sales recorded for this period.</p>"
+              : `
+              <table>
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Quantity Sold</th>
+                    <th>Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${report
+                    .map(
+                      (item) =>
+                        `<tr><td>${item.name}</td><td>${item.quantity}</td><td>${item.amount.toFixed(
+                          2
+                        )}</td></tr>`
+                    )
+                    .join("")}
+                </tbody>
+              </table>
+            `
+          }
+
+          <h3>Sales Total: ₹${overallTotal.toFixed(2)}</h3>
+          <h3>Expenditure Total: ₹${expenditureTotal.toFixed(2)}</h3>
+          <h3>Net Profit/Loss: ₹${netProfit.toFixed(2)}</h3>
+        </body>
+      </html>
+    `
+
+    printWindow.document.write(reportHTML)
+    printWindow.document.close()
+    printWindow.print()
   }
 
   return (
     <div className="sales-report">
       <h2>📊 Sales Report</h2>
 
-      {/* Date Picker */}
+      {/* Date Range Picker */}
       <div className="date-picker">
-        <label>Select Date: </label>
+        <label>From: </label>
         <input
           type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
+        <label style={{ marginLeft: "10px" }}>To: </label>
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
         />
       </div>
 
-      {/* Quick Filters */}
-      <div className="filters">
-        <button onClick={() => setFilter("day")}>Today</button>
-        <button onClick={() => setFilter("week")}>This Week</button>
-        <button onClick={() => setFilter("month")}>This Month</button>
-        <button onClick={() => setFilter("year")}>This Year</button>
-      </div>
-
-      {/* Export Buttons */}
+      {/* Export + Print Buttons */}
       <div className="export-buttons" style={{ marginTop: "10px" }}>
         <button onClick={exportCSV}>Export CSV</button>
         <button onClick={exportPDF}>Export PDF</button>
+        <button onClick={printReport}>🖨️ Print</button>
       </div>
 
       {report.length === 0 ? (
-        <p>No sales recorded for this {filter}.</p>
+        <p>No sales recorded for this period.</p>
       ) : (
         <table>
           <thead>
@@ -218,8 +256,8 @@ function SalesReport({ menuItems }: SalesReportProps) {
         </table>
       )}
 
-      <h3>Sales Total ({filter}): ₹{overallTotal.toFixed(2)}</h3>
-      <h3>Expenditure Total ({filter}): ₹{expenditureTotal.toFixed(2)}</h3>
+      <h3>Sales Total: ₹{overallTotal.toFixed(2)}</h3>
+      <h3>Expenditure Total: ₹{expenditureTotal.toFixed(2)}</h3>
       <h3>Net Profit/Loss: ₹{netProfit.toFixed(2)}</h3>
     </div>
   )
