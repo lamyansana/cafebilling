@@ -238,80 +238,96 @@ const Expenditure: React.FC = () => {
       </div>
 
       {/* Add Expense Form */}
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: "grid",
-          gap: "10px",
-          maxWidth: "600px",
-          marginBottom: "20px",
-        }}
-      >
-        <select
-          name="category"
-          value={form.category}
-          onChange={handleChange}
-          required
-        >
-          <option value="">Select Category</option>
-          <option value="Veg">Veg</option>
-          <option value="Meat">Meat</option>
-          <option value="Grocery">Grocery</option>
-          <option value="Coffee">Coffee</option>
-          <option value="Whitener">Whitener</option>
-          <option value="Rent">Rent</option>
-          <option value="Utilities">Utilities</option>
-          <option value="Misc">Misc</option>
-        </select>
-        <input
-          type="text"
-          name="item"
-          placeholder="Item (e.g., Milk, Sugar)"
-          value={form.item}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="number"
-          name="rate"
-          placeholder="Rate (₹)"
-          value={form.rate}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="number"
-          name="quantity"
-          placeholder="Quantity"
-          value={form.quantity}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="number"
-          name="amount"
-          placeholder="Amount (auto)"
-          value={form.amount}
-          readOnly
-        />
-        <input
-          type="date"
-          name="date"
-          value={form.date}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="text"
-          name="notes"
-          placeholder="Notes (optional)"
-          value={form.notes}
-          onChange={handleChange}
-        />
-        <button type="submit" className="primary-btn">
-          Add Expense
-        </button>
-      </form>
+      {/* Add Expense Form */}
+<form
+  onSubmit={handleSubmit}
+  style={{
+    display: "grid",
+    gap: "10px",
+    maxWidth: "600px",
+    marginBottom: "20px",
+  }}
+>
+  <select
+    name="category"
+    value={form.category}
+    onChange={handleChange}
+    required
+    style={{ fontSize: "16px", padding: "8px" }}
+  >
+    <option value="">Select Category</option>
+    <option value="Veg">Veg</option>
+    <option value="Meat">Meat</option>
+    <option value="Grocery">Grocery</option>
+    <option value="Coffee">Coffee</option>
+    <option value="Whitener">Whitener</option>
+    <option value="Rent">Rent</option>
+    <option value="Utilities">Utilities</option>
+    <option value="Misc">Misc</option>
+  </select>
+
+  <input
+    type="text"
+    name="item"
+    placeholder="Item (e.g., Milk, Sugar)"
+    value={form.item}
+    onChange={handleChange}
+    required
+    style={{ fontSize: "16px", padding: "8px" }}
+  />
+
+  <input
+    type="number"
+    name="rate"
+    placeholder="Rate (₹)"
+    value={form.rate}
+    onChange={handleChange}
+    required
+    style={{ fontSize: "16px", padding: "8px" }}
+  />
+
+  <input
+    type="number"
+    name="quantity"
+    placeholder="Quantity"
+    value={form.quantity}
+    onChange={handleChange}
+    required
+    style={{ fontSize: "16px", padding: "8px" }}
+  />
+
+  <input
+    type="number"
+    name="amount"
+    placeholder="Amount (auto)"
+    value={form.amount}
+    readOnly
+    style={{ fontSize: "16px", padding: "8px" }}
+  />
+
+  <input
+    type="date"
+    name="date"
+    value={form.date}
+    onChange={handleChange}
+    required
+    style={{ fontSize: "16px", padding: "8px" }}
+  />
+
+  <input
+    type="text"
+    name="notes"
+    placeholder="Notes (optional)"
+    value={form.notes}
+    onChange={handleChange}
+    style={{ fontSize: "16px", padding: "8px" }}
+  />
+
+  <button type="submit" className="primary-btn" style={{ fontSize: "16px", padding: "10px" }}>
+    Add Expense
+  </button>
+</form>
+
 
       {/* Export Buttons */}
       <div style={{ marginBottom: "20px" }}>
