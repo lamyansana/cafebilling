@@ -75,7 +75,7 @@ function SalesReport({ menuItems }: SalesReportProps) {
     if (expCSV) {
       const rows = expCSV.trim().split("\n").slice(1)
       rows.forEach((row) => {
-        const [id, category, amount, dateStr] = row.split(",")
+        const [ amount, dateStr] = row.split(",")
         const expDate = new Date(dateStr)
         if (!isNaN(expDate.getTime()) && isInRange(expDate, start, end)) {
           expTotal += parseFloat(amount || "0")
