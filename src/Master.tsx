@@ -22,6 +22,7 @@ export interface MenuItem {
   category: string;
   name: string;
   price: number;
+  isCustom?: boolean;
 }
 
 export interface CartItem extends MenuItem {
@@ -37,7 +38,7 @@ export interface PendingOrder {
 }
 
 function Master({cafeId, role }: MasterProps) {
-  //const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([
     { id: Date.now(), name: "Order 1", cart: [], paymentMode: "Cash", isSubmitted: false }
   ]);
@@ -182,7 +183,7 @@ function Master({cafeId, role }: MasterProps) {
     try {
       const total = order.cart.reduce((sum, ci) => sum + ci.price * ci.quantity, 0);
       const itemsArray = order.cart.map((ci) => ({
-        menu_item_id: ci.id,
+        menu_item_id: ci.isCustom ? null : ci.id,
         item_name: ci.name,
         quantity: ci.quantity,
         price: ci.price,

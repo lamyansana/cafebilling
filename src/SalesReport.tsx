@@ -8,28 +8,23 @@ interface SalesReportProps {
   cafeId: number | null;
 }
 
-interface MenuItem {
-  id: number;
-  category: string;
-  name: string;
-  price: number;
-}
+
 
 type Order = {
   id: string;
   created_at: string;
   total_amount: number;
   payment_mode: string;
-  order_items: { item_name: string; quantity: number }[];
-};
+  order_items: { item_name: string; quantity: number; price:number}[];
+}
 
 type Expenditure = {
   amount: number;
   expense_date: string;
-};
+}
 
 const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+ 
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenditures, setExpenditures] = useState<Expenditure[]>([]);
   const [filter, setFilter] = useState<"today" | "week" | "month" | "year" | "range">("today");
@@ -41,14 +36,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
 
     const fetchData = async () => {
       // Menu items
-      const { data: menuData, error: menuError } = await supabase
-        .from("menu_items")
-        .select("*")
-        .eq("cafe_id", cafeId)
-        .order("category", { ascending: true })
-        .order("name", { ascending: true });
-
-      if (!menuError && menuData) setMenuItems(menuData as MenuItem[]);
+    
 
       // Orders with items
       const { data: ordersData, error: ordersError } = await supabase
@@ -60,7 +48,8 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
           payment_mode,
           order_items (
             item_name,
-            quantity
+            quantity,
+            price
           )
         `)
         .eq("cafe_id", cafeId)
@@ -140,7 +129,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       o.order_items.map((it) => ({
         name: it.item_name,
         quantity: it.quantity,
-        amount: it.quantity * (menuItems.find((m) => m.name === it.item_name)?.price || 0),
+        amount: it.quantity * it.price,
       }))
     )
     .reduce((acc, cur) => {

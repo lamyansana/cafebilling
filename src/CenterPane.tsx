@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Routes, Route, NavLink, Navigate } from "react-router-dom";
+import { Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
 import type { MenuItem } from "./Master";
 import { supabase } from "./supabaseClient";
 
@@ -20,41 +20,54 @@ function CenterPane({ addToCart }: CenterPaneProps) {
   const [categories, setCategories] = useState<string[]>([]);
   const [customItem, setCustomItem] = useState({ name: "", price: "", category: "" });
 
+  const location = useLocation();
   const cafeId = 1; // replace with your cafe ID
 
   // Fetch menu items from Supabase
   const fetchMenuItems = async () => {
-    const { data, error } = await supabase
-      .from("menu_items")
-      .select("*")
-      .eq("cafe_id", cafeId)
-      .order("category", { ascending: true })
-      .order("name", { ascending: true });
+  const { data, error } = await supabase
+    .from("menu_items")
+    .select("*")
+    .eq("cafe_id", cafeId)
+    .order("category", { ascending: true })
+    .order("name", { ascending: true });
 
-    if (error) {
-      console.error("Error fetching menu items:", error.message);
-      return;
-    }
+  if (error) {
+    console.error("Error fetching menu items:", error.message);
+    return;
+  }
 
-    const items: MenuItem[] = (data || []).map((item: any) => ({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      category: item.category,
-    }));
+  const items: MenuItem[] = (data || []).map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    category: item.category,
+  }));
 
-    setMenuItems(items);
+  setMenuItems(items);
 
-    const uniqueCategories = Array.from(new Set(items.map(i => i.category)));
-    setCategories(uniqueCategories);
-  };
+  // ✅ Exclude "Custom" from categories
+  const uniqueCategories = Array.from(
+    new Set(items.map(i => i.category))
+  ).filter(cat => cat.toLowerCase() !== "custom");
+
+  setCategories(uniqueCategories);
+};
+
 
   useEffect(() => {
     fetchMenuItems();
   }, []);
 
-  // Add a custom item to cart and Supabase
-  const handleCustomSubmit = async (e: React.FormEvent) => {
+  // ✅ Reset custom form every time you land on /menu/custom
+  useEffect(() => {
+    if (location.pathname.endsWith("/menu/custom")) {
+      setCustomItem({ name: "", price: "", category: "" });
+    }
+  }, [location.pathname]);
+
+  // ✅ Add a custom item ONLY to cart (not database)
+  const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customItem.name || !customItem.price) {
       alert("Please enter item name and price");
@@ -62,29 +75,15 @@ function CenterPane({ addToCart }: CenterPaneProps) {
     }
 
     const newItem: MenuItem = {
-      id: Date.now(), // temporary frontend ID
+      id: Date.now(), // temporary unique ID
       name: customItem.name,
       price: parseFloat(customItem.price),
       category: customItem.category || "Custom",
+      isCustom: true,
     };
 
-    // Add directly to cart
-    addToCart(newItem);
-
-    // Save to Supabase
-    const { error } = await supabase.from("menu_items").insert([
-      {
-        name: newItem.name,
-        price: newItem.price,
-        category: newItem.category,
-        cafe_id: cafeId,
-      },
-    ]);
-
-    if (error) console.error("Failed to add custom item:", error.message);
-    else fetchMenuItems(); // refresh menu
-
-    setCustomItem({ name: "", price: "", category: "" });
+    addToCart(newItem); // just goes to cart
+    setCustomItem({ name: "", price: "", category: "" }); // reset form
   };
 
   return (
@@ -116,7 +115,10 @@ function CenterPane({ addToCart }: CenterPaneProps) {
       {/* Routes */}
       <Routes>
         {/* Redirect /menu → first category */}
-        <Route index element={<Navigate to={`/menu/${slugify(categories[0] || "Custom")}`} replace />} />
+        <Route
+          index
+          element={<Navigate to={`/menu/${slugify(categories[0] || "Custom")}`} replace />}
+        />
 
         {/* Category Routes */}
         {categories.map(cat => {
