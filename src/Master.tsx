@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
@@ -12,7 +12,6 @@ import ConfirmModal from "./ConfirmModal";
 import Expenditure from "./Expenditure";
 
 interface MasterProps {
-  //session: any;
   cafeId: number | null;
   role: "admin" | "staff";
 }
@@ -37,53 +36,35 @@ export interface PendingOrder {
   isSubmitted: boolean;
 }
 
-function Master({cafeId, role }: MasterProps) {
-  
+// 🔹 Helper to create a new empty order
+const createNewOrder = (count = 1): PendingOrder => ({
+  id: Date.now(),
+  name: `Order ${count}`,
+  cart: [],
+  paymentMode: "Cash",
+  isSubmitted: false,
+});
+
+function Master({ cafeId, role }: MasterProps) {
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([
-    { id: Date.now(), name: "Order 1", cart: [], paymentMode: "Cash", isSubmitted: false }
+    createNewOrder(1),
   ]);
   const [activeOrderId, setActiveOrderId] = useState<number | null>(
     pendingOrders.length > 0 ? pendingOrders[0].id : null
   );
   const [toast, setToast] = useState<string | null>(null);
   const [isLeftOpen, setIsLeftOpen] = useState(true);
-  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; orderId: number | null }>({
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    orderId: number | null;
+  }>({
     isOpen: false,
-    orderId: null
+    orderId: null,
   });
-
-  // Fetch menu items only if cafeId exists
-  useEffect(() => {
-    if (cafeId === null) return;
-
-    const fetchMenu = async () => {
-      const { data, error } = await supabase
-        .from("menu_items")
-        .select("*")
-        .eq("cafe_id", cafeId)
-        .order("category", { ascending: true })
-        .order("name", { ascending: true });
-
-      if (error) {
-        console.error("Failed to fetch menu items:", error);
-        setToast("Failed to load menu ❌");
-      } else if (data) {
-        //setMenuItems(data as MenuItem[]);
-      }
-    };
-
-    fetchMenu();
-  }, [cafeId])
 
   // ➕ Create new order tab
   const addNewOrder = () => {
-    const newOrder: PendingOrder = {
-      id: Date.now(),
-      name: `Order ${pendingOrders.length + 1}`,
-      cart: [],
-      paymentMode: "Cash",
-      isSubmitted: false,
-    };
+    const newOrder = createNewOrder(pendingOrders.length + 1);
     setPendingOrders((prev) => [...prev, newOrder]);
     setActiveOrderId(newOrder.id);
   };
@@ -103,15 +84,10 @@ function Master({cafeId, role }: MasterProps) {
       const updatedOrders = prevOrders.filter((order) => order.id !== id);
 
       if (activeOrderId === id) {
-        if (updatedOrders.length > 0) setActiveOrderId(updatedOrders[0].id);
-        else {
-          const newOrder: PendingOrder = {
-            id: Date.now(),
-            name: "Order 1",
-            cart: [],
-            paymentMode: "Cash",
-            isSubmitted: false,
-          };
+        if (updatedOrders.length > 0) {
+          setActiveOrderId(updatedOrders[0].id);
+        } else {
+          const newOrder = createNewOrder(1);
           setActiveOrderId(newOrder.id);
           return [newOrder];
         }
@@ -134,7 +110,11 @@ function Master({cafeId, role }: MasterProps) {
           ? {
               ...order,
               cart: order.cart.find((c) => c.id === item.id)
-                ? order.cart.map((c) => (c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c))
+                ? order.cart.map((c) =>
+                    c.id === item.id
+                      ? { ...c, quantity: c.quantity + 1 }
+                      : c
+                  )
                 : [...order.cart, { ...item, quantity: 1 }],
             }
           : order
@@ -146,7 +126,12 @@ function Master({cafeId, role }: MasterProps) {
     setPendingOrders((prev) =>
       prev.map((order) =>
         order.id === activeOrderId
-          ? { ...order, cart: order.cart.map((ci) => (ci.id === id ? { ...ci, quantity: ci.quantity + 1 } : ci)) }
+          ? {
+              ...order,
+              cart: order.cart.map((ci) =>
+                ci.id === id ? { ...ci, quantity: ci.quantity + 1 } : ci
+              ),
+            }
           : order
       )
     );
@@ -159,7 +144,9 @@ function Master({cafeId, role }: MasterProps) {
           ? {
               ...order,
               cart: order.cart
-                .map((ci) => (ci.id === id ? { ...ci, quantity: ci.quantity - 1 } : ci))
+                .map((ci) =>
+                  ci.id === id ? { ...ci, quantity: ci.quantity - 1 } : ci
+                )
                 .filter((ci) => ci.quantity > 0),
             }
           : order
@@ -169,7 +156,9 @@ function Master({cafeId, role }: MasterProps) {
 
   const setPaymentMode = (mode: "Cash" | "UPI") => {
     setPendingOrders((prev) =>
-      prev.map((order) => (order.id === activeOrderId ? { ...order, paymentMode: mode } : order))
+      prev.map((order) =>
+        order.id === activeOrderId ? { ...order, paymentMode: mode } : order
+      )
     );
   };
 
@@ -178,10 +167,14 @@ function Master({cafeId, role }: MasterProps) {
     if (cafeId === null) return;
 
     const order = pendingOrders.find((o) => o.id === orderId);
-    if (!order || order.cart.length === 0 || !cafeId) return;
+    if (!order || order.cart.length === 0) return;
 
     try {
-      const total = order.cart.reduce((sum, ci) => sum + ci.price * ci.quantity, 0);
+      const total = order.cart.reduce(
+        (sum, ci) => sum + ci.price * ci.quantity,
+        0
+      );
+
       const itemsArray = order.cart.map((ci) => ({
         menu_item_id: ci.isCustom ? null : ci.id,
         item_name: ci.name,
@@ -201,13 +194,7 @@ function Master({cafeId, role }: MasterProps) {
       setPendingOrders((prev) => {
         const remaining = prev.filter((o) => o.id !== orderId);
         if (remaining.length === 0) {
-          const newOrder: PendingOrder = {
-            id: Date.now(),
-            name: "Order 1",
-            cart: [],
-            paymentMode: "Cash",
-            isSubmitted: false,
-          };
+          const newOrder = createNewOrder(1);
           setActiveOrderId(newOrder.id);
           return [newOrder];
         } else {
@@ -216,7 +203,9 @@ function Master({cafeId, role }: MasterProps) {
         }
       });
 
-      setToast(`Order submitted successfully with ${order.paymentMode} payment! ✅`);
+      setToast(
+        `Order submitted successfully with ${order.paymentMode} payment! ✅`
+      );
     } catch (err) {
       console.error("Transaction failed:", err);
       setToast("Failed to submit order ❌");
@@ -226,19 +215,33 @@ function Master({cafeId, role }: MasterProps) {
   return (
     <BrowserRouter>
       <div className="container">
-        <LeftPane isOpen={isLeftOpen} setIsOpen={setIsLeftOpen} role={role}/>
+        <LeftPane isOpen={isLeftOpen} setIsOpen={setIsLeftOpen} role={role} />
 
-        <div className="center-right" style={{ display: "flex", flexGrow: 1, transition: "all 0.3s" }}>
+        <div
+          className="center-right"
+          style={{ display: "flex", flexGrow: 1, transition: "all 0.3s" }}
+        >
           <div className="center-pane-wrapper" style={{ flexGrow: 1 }}>
             <Routes>
-              <Route path="/" element={<Navigate to="/menu/maggi-and-noodles" replace />} />
-              <Route path="/menu/*" element={<CenterPane addToCart={addToCart} />} />
+              <Route
+                path="/"
+                element={<Navigate to="/menu/maggi-and-noodles" replace />}
+              />
+              <Route
+                path="/menu/*"
+                element={<CenterPane addToCart={addToCart} />}
+              />
               <Route path="/past-orders" element={<ViewPastOrders />} />
               {role === "admin" && (
-  <Route path="/sales-report" element={<SalesReport cafeId={cafeId} />} />
-)}
-
-              <Route path="/expenditure" element={<Expenditure  cafeId={cafeId} />} />
+                <Route
+                  path="/sales-report"
+                  element={<SalesReport cafeId={cafeId} />}
+                />
+              )}
+              <Route
+                path="/expenditure"
+                element={<Expenditure cafeId={cafeId} />}
+              />
             </Routes>
           </div>
 
@@ -261,7 +264,9 @@ function Master({cafeId, role }: MasterProps) {
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         message="This order has items. Are you sure you want to delete it?"
-        onConfirm={() => confirmModal.orderId && actuallyDeleteOrder(confirmModal.orderId)}
+        onConfirm={() =>
+          confirmModal.orderId && actuallyDeleteOrder(confirmModal.orderId)
+        }
         onCancel={() => setConfirmModal({ isOpen: false, orderId: null })}
       />
     </BrowserRouter>

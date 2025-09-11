@@ -21,6 +21,7 @@ type Order = {
 type Expenditure = {
   amount: number;
   expense_date: string;
+  payment_mode: "Cash" | "UPI";
 }
 
 const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
@@ -70,7 +71,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       // Expenditures
       const { data: expData, error: expError } = await supabase
         .from("expenditures")
-        .select("amount, date")
+        .select("amount, date, payment_mode")
         .eq("cafe_id", cafeId)
         .order("date", { ascending: false });
 
@@ -79,6 +80,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
           expData.map((e: any) => ({
             amount: parseFloat(e.amount),
             expense_date: e.date,
+            payment_mode: e.payment_mode,
           }))
         );
       }
@@ -86,6 +88,8 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
 
     fetchData();
   }, [cafeId]);
+
+  
 
   // Date filter
   const filterByDate = (dateStr: string) => {
@@ -155,6 +159,15 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
   const salesByUPI = filteredOrders
     .filter((o) => o.payment_mode === "UPI")
     .reduce((sum, o) => sum + o.total_amount, 0);
+
+    const expensesByCash = filteredExpenditures
+  .filter((e) => e.payment_mode === "Cash")
+  .reduce((sum, e) => sum + e.amount, 0);
+
+const expensesByUPI = filteredExpenditures
+  .filter((e) => e.payment_mode === "UPI")
+  .reduce((sum, e) => sum + e.amount, 0);
+
 
   // CSV download
   const downloadCSV = () => {
@@ -245,7 +258,11 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     y += 8;
     doc.text(`UPI: ₹${salesByUPI.toFixed(2)}`, 14, y);
     y += 8;
-    doc.text(`Expenses: ₹${expenses.toFixed(2)}`, 14, y);
+    doc.text(`Expenses (Cash): ₹${expensesByCash.toFixed(2)}`, 14, y); 
+    y += 8;
+    doc.text(`Expenses (UPI): ₹${expensesByUPI.toFixed(2)}`, 14, y); 
+    y += 8;
+    doc.text(`Total Expenses: ₹${expenses.toFixed(2)}`, 14, y);
     y += 8;
     doc.text(`Net Profit: ₹${profit.toFixed(2)}`, 14, y);
 
@@ -320,7 +337,9 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       <p>Revenue: ₹{revenue.toFixed(2)}</p>
       <p>Cash: ₹{salesByCash.toFixed(2)}</p>
       <p>UPI: ₹{salesByUPI.toFixed(2)}</p>
-      <p>Expenses: ₹{expenses.toFixed(2)}</p>
+      <p>Total Expenses: ₹{expenses.toFixed(2)}</p>
+      <p>Expenses (Cash): ₹{expensesByCash.toFixed(2)}</p>
+      <p>Expenses (UPI): ₹{expensesByUPI.toFixed(2)}</p>
       <p>Net Profit: ₹{profit.toFixed(2)}</p>
 
       {/* Downloads */}
