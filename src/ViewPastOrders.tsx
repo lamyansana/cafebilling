@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { supabase } from "./supabaseClient"; // adjust path if needed
 
 type Order = {
-  OrderNumber: string;
-  DateTime: string;
-  Items: string;
-  Total: string;
-  PaymentMode: string;
+  id: number;
+  created_at: string;
+  total_amount: number;
+  payment_mode: string;
+  items: { item_name: string; quantity: number }[];
 };
 
 const ViewPastOrders: React.FC = () => {
@@ -14,28 +15,43 @@ const ViewPastOrders: React.FC = () => {
   const [customEnd, setCustomEnd] = useState("");
   const [pastOrders, setPastOrders] = useState<Order[]>([]);
 
-  // ✅ Load CSV orders safely only on client
+  // 🔽 Load orders from Supabase
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const fetchOrders = async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select(
+          `
+          id,
+          created_at,
+          total_amount,
+          payment_mode,
+          order_items (
+            item_name,
+            quantity
+          )
+        `
+        )
+        .order("created_at", { ascending: false });
 
-    const csv = localStorage.getItem("ordersCSV");
-    if (!csv) return;
+      if (error) {
+        console.error("Error loading orders:", error);
+        return;
+      }
+      if (data) {
+        setPastOrders(
+          data.map((o: any) => ({
+            id: o.id,
+            created_at: o.created_at,
+            total_amount: o.total_amount,
+            payment_mode: o.payment_mode,
+            items: o.order_items || [],
+          }))
+        );
+      }
+    };
 
-    const rows = csv.trim().split("\n");
-    const dataRows = rows.slice(1);
-
-    const parsed = dataRows.map((row) => {
-      const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-      return {
-        OrderNumber: cols[0]?.trim(),
-        DateTime: cols[1]?.replace(/"/g, "").trim(),
-        Items: cols[2]?.replace(/"/g, "").trim(),
-        Total: cols[3]?.trim(),
-        PaymentMode: cols[4]?.trim(),
-      };
-    });
-
-    setPastOrders(parsed);
+    fetchOrders();
   }, []);
 
   // 🔍 Filtering
@@ -44,7 +60,7 @@ const ViewPastOrders: React.FC = () => {
     const now = new Date();
 
     return orders.filter((order) => {
-      const orderDate = new Date(order.DateTime);
+      const orderDate = new Date(order.created_at);
 
       switch (filter) {
         case "today":
@@ -131,13 +147,20 @@ const ViewPastOrders: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredOrders.map((order, idx) => (
-              <tr key={idx}>
-                <td>{order.OrderNumber}</td>
-                <td>{new Date(order.DateTime).toLocaleString()}</td>
-                <td>{order.Items}</td>
-                <td>₹{order.Total}</td>
-                <td>{order.PaymentMode}</td>
+            {filteredOrders.map((order) => (
+              <tr key={order.id}>
+                <td>{order.id}</td>
+                <td>{new Date(order.created_at).toLocaleString()}</td>
+                <td>
+                  {order.items.map((it, idx) => (
+                    <span key={idx}>
+                      {it.item_name} × {it.quantity}
+                      {idx < order.items.length - 1 ? ", " : ""}
+                    </span>
+                  ))}
+                </td>
+                <td>₹{order.total_amount}</td>
+                <td>{order.payment_mode}</td>
               </tr>
             ))}
           </tbody>

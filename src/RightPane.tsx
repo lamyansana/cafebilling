@@ -1,16 +1,16 @@
-import type { PendingOrder } from "./Master"
+import type { PendingOrder } from "./Master";
 
 interface RightPaneProps {
-  orders: PendingOrder[]
-  switchOrder: (id: number) => void
-  addNewOrder: () => void
-  incrementQuantity: (id: number) => void
-  decrementQuantity: (id: number) => void
-  setPaymentMode: (mode: string) => void
-  submitOrder: (id: number) => void
-  deleteOrder: (id: number) => void
-  activeOrderId: number | null // ✅ allow null
-  setActiveOrderId: React.Dispatch<React.SetStateAction<number | null>>
+  orders: PendingOrder[];
+  switchOrder: (id: number) => void;
+  addNewOrder: () => void;
+  incrementQuantity: (id: number) => void;
+  decrementQuantity: (id: number) => void;
+  setPaymentMode: (mode: "Cash" | "UPI") => void; // ✅ strict type
+  submitOrder: (id: number) => void;
+  deleteOrder: (id: number) => void;
+  activeOrderId: number | null;
+  setActiveOrderId: React.Dispatch<React.SetStateAction<number | null>>;
 }
 
 function RightPane({
@@ -25,16 +25,16 @@ function RightPane({
   deleteOrder,
   setActiveOrderId,
 }: RightPaneProps) {
-  const activeOrder = orders.find(o => o.id === activeOrderId) || null
+  const activeOrder = orders.find((o) => o.id === activeOrderId) || null;
   const total = activeOrder
     ? activeOrder.cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    : 0
+    : 0;
 
   return (
     <div className="right-pane">
       {/* 🔹 Order Tabs */}
       <div className="order-tabs">
-        {orders.map(order => (
+        {orders.map((order) => (
           <div
             key={order.id}
             className={`tab-btn ${order.id === activeOrderId ? "active" : ""}`}
@@ -53,23 +53,17 @@ function RightPane({
                 activeOrderId === order.id ? "#06595eff" : "#6d6777ff",
             }}
           >
-            {/* Order Name - switch when clicked */}
-            <span
-              onClick={() => switchOrder(order.id)}
-              style={{ cursor: "pointer" }}
-            >
+            <span onClick={() => switchOrder(order.id)} style={{ cursor: "pointer" }}>
               {order.name}
             </span>
 
-            {/* ❌ Delete button */}
             <button
               onClick={(e) => {
-                e.stopPropagation()
-                deleteOrder(order.id)
+                e.stopPropagation();
+                deleteOrder(order.id);
                 if (activeOrderId === order.id) {
-                  // auto-select next available order or null
-                  const remaining = orders.filter(o => o.id !== order.id)
-                  setActiveOrderId(remaining.length > 0 ? remaining[0].id : null)
+                  const remaining = orders.filter((o) => o.id !== order.id);
+                  setActiveOrderId(remaining.length > 0 ? remaining[0].id : null);
                 }
               }}
               style={{
@@ -100,7 +94,7 @@ function RightPane({
           ) : (
             <>
               <ul>
-                {activeOrder.cart.map(item => (
+                {activeOrder.cart.map((item) => (
                   <li key={item.id} className="cart-item">
                     <span>{item.name}</span>
                     <span>₹{item.price}</span>
@@ -127,7 +121,9 @@ function RightPane({
                     name={`payment-${activeOrder.id}`}
                     value="Cash"
                     checked={activeOrder.paymentMode === "Cash"}
-                    onChange={(e) => setPaymentMode(e.target.value)}
+                    onChange={(e) =>
+                      setPaymentMode(e.target.value as "Cash" | "UPI")
+                    }
                   />
                   <span>Cash</span>
                 </label>
@@ -141,7 +137,9 @@ function RightPane({
                     name={`payment-${activeOrder.id}`}
                     value="UPI"
                     checked={activeOrder.paymentMode === "UPI"}
-                    onChange={(e) => setPaymentMode(e.target.value)}
+                    onChange={(e) =>
+                      setPaymentMode(e.target.value as "Cash" | "UPI")
+                    }
                   />
                   <span>UPI</span>
                 </label>
@@ -162,7 +160,7 @@ function RightPane({
         <p>No active order selected</p>
       )}
     </div>
-  )
+  );
 }
 
-export default RightPane
+export default RightPane;

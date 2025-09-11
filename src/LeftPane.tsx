@@ -5,9 +5,10 @@ import "./App.css"
 interface LeftPaneProps {
   isOpen: boolean
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
+  role: "admin" | "staff";
 }
 
-const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen }) => {
+const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen, role }) => {
   return (
     <div className={`left-pane ${isOpen ? "open" : "collapsed"}`}>
       {/* ✅ Toggle button - always visible */}
@@ -38,14 +39,22 @@ const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen }) => {
             >
               View Past Orders
             </NavLink>
-            <NavLink
-              to="/sales-report"
-              className={({ isActive }) =>
-                isActive ? "active-link" : "inactive-link"
-              }
-            >
-              Sales Report
-            </NavLink>
+
+
+            {/* Only show for admin */}
+            {role === "admin" && (
+              <NavLink
+                to="/sales-report"
+                className={({ isActive }) =>
+                  isActive ? "active-link" : "inactive-link"
+                }
+              >
+                Sales Report
+              </NavLink>
+            )}
+
+
+            
             <NavLink
               to="/expenditure"
               className={({ isActive }) =>

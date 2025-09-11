@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react"
-import jsPDF from "jspdf"
+import { supabase } from "./supabaseClient"
+
+interface ExpenditureProps {
+  //session: any; 
+  cafeId: number | null;  // <-- receive cafeId as prop
+}
 
 interface Expense {
   id: number
@@ -9,21 +14,14 @@ interface Expense {
   quantity: number
   amount: number
   date: string
-  notes: string
+  payment_mode: "Cash" | "UPI"
 }
 
-const STORAGE_KEY = "expendituresCSV"
-const CAFE_NAME = "Myco Café"
-
-const Expenditure: React.FC = () => {
+const Expenditure: React.FC<ExpenditureProps> = ({ cafeId }) => {
   const [expenses, setExpenses] = useState<Expense[]>([])
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  )
-  const [filter, setFilter] = useState<"day" | "week" | "month" | "year">("day")
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([])
-
-  const getToday = () => new Date().toISOString().split("T")[0]
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0])
+  const [filter, setFilter] = useState<"day" | "week" | "month" | "year">("day")
 
   const [form, setForm] = useState({
     category: "",
@@ -31,51 +29,30 @@ const Expenditure: React.FC = () => {
     rate: "",
     quantity: "1",
     amount: "",
-    date: getToday(),
-    notes: "",
+    date: new Date().toISOString().split("T")[0],
+    payment_mode: "Cash",
   })
 
-  const parseCSV = (csv: string): Expense[] => {
-    const lines = csv.trim().split("\n")
-    const headers = lines[0].split(",")
-    return lines.slice(1).map((line, index) => {
-      const values = line.split(",")
-      const obj: any = {}
-      headers.forEach((h, i) => (obj[h] = values[i]))
-      return {
-        id: index + 1,
-        category: obj.category,
-        item: obj.item,
-        rate: parseFloat(obj.rate),
-        quantity: parseFloat(obj.quantity),
-        amount: parseFloat(obj.amount),
-        date: obj.date,
-        notes: obj.notes || "",
-      } as Expense
-    })
-  }
-
-  const toCSV = (data: Expense[]): string => {
-    const headers = "id,category,item,rate,quantity,amount,date,notes"
-    const rows = data.map(
-      (exp) =>
-        `${exp.id},${exp.category},${exp.item},${exp.rate},${exp.quantity},${exp.amount},${exp.date},${exp.notes || ""}`
-    )
-    return [headers, ...rows].join("\n")
-  }
-
+  // ✅ Fetch expenditures from Supabase
   useEffect(() => {
-    const existingCSV = localStorage.getItem(STORAGE_KEY)
-    if (existingCSV) {
-      setExpenses(parseCSV(existingCSV))
-    }
-  }, [])
+    if (!cafeId) return; // Don't fetch if cafeId is null
 
-  useEffect(() => {
-    if (expenses.length > 0) {
-      localStorage.setItem(STORAGE_KEY, toCSV(expenses))
+    const fetchExpenses = async () => {
+      const { data, error } = await supabase
+        .from("expenditures")
+        .select("*")
+        .eq("cafe_id", cafeId) 
+        .order("date", { ascending: false })
+
+      if (error) {
+        console.error("Fetch error:", error.message)
+      } else if (data) {
+        setExpenses(data as Expense[])
+      }
     }
-  }, [expenses])
+
+    fetchExpenses()
+  }, [cafeId])
 
   // ✅ Filter logic
   useEffect(() => {
@@ -110,118 +87,89 @@ const Expenditure: React.FC = () => {
     setFilteredExpenses(filtered)
   }, [expenses, selectedDate, filter])
 
+  // ✅ Form change
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target
-    let updatedForm = { ...form, [name]: value }
+    let updated = { ...form, [name]: value }
 
     if (name === "rate" || name === "quantity") {
-      const rate = parseFloat(
-        name === "rate" ? value : updatedForm.rate || "0"
-      )
-      const qty = parseFloat(
-        name === "quantity" ? value : updatedForm.quantity || "0"
-      )
+      const rate = parseFloat(name === "rate" ? value : updated.rate || "0")
+      const qty = parseFloat(name === "quantity" ? value : updated.quantity || "0")
       if (!isNaN(rate) && !isNaN(qty)) {
-        updatedForm.amount = (rate * qty).toFixed(2)
+        updated.amount = (rate * qty).toFixed(2)
       }
     }
 
-    setForm(updatedForm)
+    setForm(updated)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.category || !form.item || !form.rate || !form.quantity) {
-      alert("Please fill in all required fields")
-      return
-    }
-    const newExpense: Expense = {
-      id: expenses.length + 1,
-      category: form.category,
-      item: form.item,
-      rate: parseFloat(form.rate),
-      quantity: parseFloat(form.quantity),
-      amount: parseFloat(form.amount),
-      date: form.date,
-      notes: form.notes,
-    }
-    setExpenses([...expenses, newExpense])
+
+  // ✅ Submit new expense to Supabase
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!form.category || !form.item || !form.rate || !form.quantity) {
+    alert("Please fill in all required fields");
+    return;
+  }
+
+  if (!cafeId) {
+    alert("Cafe ID is missing!");
+    return;
+  }
+
+  const newExpense = {
+    cafe_id: cafeId, // <-- include cafeId here
+    category: form.category,
+    item: form.item,
+    rate: parseFloat(form.rate),
+    quantity: parseFloat(form.quantity),
+    //amount: parseFloat(form.amount),
+    date: form.date,
+    payment_mode: form.payment_mode,
+  };
+
+  const { data, error } = await supabase
+    .from("expenditures")
+    .insert([newExpense])
+    .select();
+
+  if (error) {
+    console.error("Insert error:", error.message);
+    alert("Failed to add expense");
+  } else if (data && data.length > 0) {
+    setExpenses([data[0] as Expense, ...expenses]);
     setForm({
       category: "",
       item: "",
       rate: "",
       quantity: "1",
       amount: "",
-      date: getToday(),
-      notes: "",
-    })
+      date: new Date().toISOString().split("T")[0],
+      payment_mode: "Cash",
+    });
   }
+}
 
+
+  
+    // ✅ Totals
   const total = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+  const cashTotal = filteredExpenses
+    .filter((exp) => exp.payment_mode === "Cash")
+    .reduce((sum, exp) => sum + exp.amount, 0)
 
-  const downloadCSV = () => {
-    const csv = toCSV(filteredExpenses)
-    const blob = new Blob([csv], { type: "text/csv" })
-    const link = document.createElement("a")
-    link.href = URL.createObjectURL(blob)
-    link.download = `expenditure_report_${filter}_${selectedDate}.csv`
-    link.click()
-  }
+  const upiTotal = filteredExpenses
+    .filter((exp) => exp.payment_mode === "UPI")
+    .reduce((sum, exp) => sum + exp.amount, 0)
 
-  const downloadPDF = () => {
-    const doc = new jsPDF()
-    const pageHeight = doc.internal.pageSize.height
-
-    doc.setFontSize(16)
-    doc.setFont("helvetica", "bold")
-    doc.text(CAFE_NAME, 105, 15, { align: "center" })
-
-    doc.setFontSize(12)
-    doc.setFont("helvetica", "normal")
-    const today = new Date().toLocaleDateString()
-    doc.text(`Expenditure Report (${filter})`, 105, 25, { align: "center" })
-    doc.text(`Generated on: ${today}`, 105, 32, { align: "center" })
-
-    let y = 50
-    doc.setFontSize(10)
-    doc.text("ID", 14, y)
-    doc.text("Category", 25, y)
-    doc.text("Item", 60, y)
-    doc.text("Rate", 100, y)
-    doc.text("Qty", 120, y)
-    doc.text("Amount", 140, y)
-    doc.text("Date", 170, y)
-    y += 10
-
-    filteredExpenses.forEach((exp) => {
-      doc.text(exp.id.toString(), 14, y)
-      doc.text(exp.category, 25, y)
-      doc.text(exp.item, 60, y)
-      doc.text(exp.rate.toFixed(2), 100, y)
-      doc.text(exp.quantity.toString(), 120, y)
-      doc.text(exp.amount.toFixed(2), 140, y)
-      doc.text(exp.date, 170, y)
-      y += 8
-      if (y > pageHeight - 20) {
-        doc.addPage()
-        y = 20
-      }
-    })
-
-    y += 10
-    doc.setFont("helvetica", "bold")
-    doc.text(`TOTAL: ₹${total.toFixed(2)}`, 14, y)
-
-    doc.save(`expenditure_report_${filter}_${selectedDate}.pdf`)
-  }
 
   return (
-    <div className="expenditure-page" style={{ padding: "20px" }}>
-      <h1>💰 Expenditure</h1>
+    <div style={{ padding: "20px" }}>
+      <h2>💰 Expenditure</h2>
 
-      {/* Date Picker + Filters */}
+      {/* ✅ Date & Filter */}
       <div style={{ marginBottom: "20px" }}>
         <label>Select Date: </label>
         <input
@@ -237,126 +185,73 @@ const Expenditure: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Expense Form */}
-      {/* Add Expense Form */}
-<form
-  onSubmit={handleSubmit}
-  style={{
-    display: "grid",
-    gap: "10px",
-    maxWidth: "600px",
-    marginBottom: "20px",
-  }}
->
-  <select
-    name="category"
-    value={form.category}
-    onChange={handleChange}
-    required
-    style={{ fontSize: "16px", padding: "8px" }}
-  >
-    <option value="">Select Category</option>
-    <option value="Veg">Veg</option>
-    <option value="Meat">Meat</option>
-    <option value="Grocery">Grocery</option>
-    <option value="Coffee">Coffee</option>
-    <option value="Whitener">Whitener</option>
-    <option value="Rent">Rent</option>
-    <option value="Utilities">Utilities</option>
-    <option value="Misc">Misc</option>
-  </select>
+      {/* ✅ Add Expense Form */}
+      <form
+        onSubmit={handleSubmit}
+        style={{ display: "grid", gap: "10px", maxWidth: "600px", marginBottom: "20px" }}
+      >
+        <select name="category" value={form.category} onChange={handleChange} required>
+          <option value="">Select Category</option>
+          <option value="Veg">Veg</option>
+          <option value="Meat">Meat</option>
+          <option value="Grocery">Grocery</option>
+          <option value="Coffee">Coffee</option>
+          <option value="Rent">Rent</option>
+          <option value="Utilities">Utilities</option>
+          <option value="Misc">Misc</option>
+        </select>
 
-  <input
-    type="text"
-    name="item"
-    placeholder="Item (e.g., Milk, Sugar)"
-    value={form.item}
-    onChange={handleChange}
-    required
-    style={{ fontSize: "16px", padding: "8px" }}
-  />
+        <input type="text" name="item" placeholder="Item" value={form.item} onChange={handleChange} required />
+        <input type="number" name="rate" placeholder="Rate (₹)" value={form.rate} onChange={handleChange} required />
+        <input type="number" name="quantity" placeholder="Quantity" value={form.quantity} onChange={handleChange} required />
+        <input type="number" name="amount" placeholder="Amount" value={form.amount} readOnly />
+        <input type="date" name="date" value={form.date} onChange={handleChange} required />
 
-  <input
-    type="number"
-    name="rate"
-    placeholder="Rate (₹)"
-    value={form.rate}
-    onChange={handleChange}
-    required
-    style={{ fontSize: "16px", padding: "8px" }}
-  />
+        {/* ✅ Payment Mode (Cash / UPI) */}
+        <div>
+          <label>
+            <input
+              type="radio"
+              name="payment_mode"
+              value="Cash"
+              checked={form.payment_mode === "Cash"}
+              onChange={handleChange}
+            />
+            Cash
+          </label>
+          <label style={{ marginLeft: "20px" }}>
+            <input
+              type="radio"
+              name="payment_mode"
+              value="UPI"
+              checked={form.payment_mode === "UPI"}
+              onChange={handleChange}
+            />
+            UPI
+          </label>
+        </div>
 
-  <input
-    type="number"
-    name="quantity"
-    placeholder="Quantity"
-    value={form.quantity}
-    onChange={handleChange}
-    required
-    style={{ fontSize: "16px", padding: "8px" }}
-  />
+        <button type="submit">➕ Add Expense</button>
+      </form>
 
-  <input
-    type="number"
-    name="amount"
-    placeholder="Amount (auto)"
-    value={form.amount}
-    readOnly
-    style={{ fontSize: "16px", padding: "8px" }}
-  />
-
-  <input
-    type="date"
-    name="date"
-    value={form.date}
-    onChange={handleChange}
-    required
-    style={{ fontSize: "16px", padding: "8px" }}
-  />
-
-  <input
-    type="text"
-    name="notes"
-    placeholder="Notes (optional)"
-    value={form.notes}
-    onChange={handleChange}
-    style={{ fontSize: "16px", padding: "8px" }}
-  />
-
-  <button type="submit" className="primary-btn" style={{ fontSize: "16px", padding: "10px" }}>
-    Add Expense
-  </button>
-</form>
-
-
-      {/* Export Buttons */}
-      <div style={{ marginBottom: "20px" }}>
-        <button onClick={downloadCSV} style={{ marginRight: "10px" }}>
-          ⬇️ Download CSV
-        </button>
-        <button onClick={downloadPDF}>⬇️ Download PDF</button>
-      </div>
-
-      {/* Filtered Expenses Table */}
-      <table border={1} cellPadding={8} style={{ borderCollapse: "collapse" }}>
+      {/* ✅ Expenditure Table */}
+      <table border={1} cellPadding={8} style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
           <tr>
             <th>ID</th>
             <th>Category</th>
             <th>Item</th>
-            <th>Rate (₹)</th>
+            <th>Rate</th>
             <th>Qty</th>
-            <th>Amount (₹)</th>
+            <th>Amount</th>
             <th>Date</th>
-            <th>Notes</th>
+            <th>Payment Mode</th>
           </tr>
         </thead>
         <tbody>
           {filteredExpenses.length === 0 ? (
             <tr>
-              <td colSpan={8} style={{ textAlign: "center" }}>
-                No expenses recorded
-              </td>
+              <td colSpan={8} style={{ textAlign: "center" }}>No expenses found</td>
             </tr>
           ) : (
             filteredExpenses.map((exp) => (
@@ -368,17 +263,30 @@ const Expenditure: React.FC = () => {
                 <td>{exp.quantity}</td>
                 <td>{exp.amount.toFixed(2)}</td>
                 <td>{exp.date}</td>
-                <td>{exp.notes}</td>
+                <td>{exp.payment_mode}</td>
               </tr>
             ))
           )}
-          {filteredExpenses.length > 0 && (
+                  {filteredExpenses.length > 0 && (
+          <>
             <tr style={{ fontWeight: "bold" }}>
-              <td colSpan={5}>Total</td>
+              <td colSpan={5}>Cash Total</td>
+              <td>{cashTotal.toFixed(2)}</td>
+              <td colSpan={2}></td>
+            </tr>
+            <tr style={{ fontWeight: "bold" }}>
+              <td colSpan={5}>UPI Total</td>
+              <td>{upiTotal.toFixed(2)}</td>
+              <td colSpan={2}></td>
+            </tr>
+            <tr style={{ fontWeight: "bold", backgroundColor: "#f0f0f0" }}>
+              <td colSpan={5}>Grand Total</td>
               <td>{total.toFixed(2)}</td>
               <td colSpan={2}></td>
             </tr>
-          )}
+          </>
+        )}
+
         </tbody>
       </table>
     </div>
