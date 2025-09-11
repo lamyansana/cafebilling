@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {  Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
 import LeftPane from "./LeftPane";
@@ -213,7 +213,7 @@ function Master({ cafeId, role }: MasterProps) {
   };
 
   return (
-    <BrowserRouter>
+    <>
       <div className="container">
         <LeftPane isOpen={isLeftOpen} setIsOpen={setIsLeftOpen} role={role} />
 
@@ -269,7 +269,7 @@ function Master({ cafeId, role }: MasterProps) {
         }
         onCancel={() => setConfirmModal({ isOpen: false, orderId: null })}
       />
-    </BrowserRouter>
+    </>
   );
 }
 
