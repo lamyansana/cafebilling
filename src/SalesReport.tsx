@@ -22,7 +22,17 @@ type Expenditure = {
   amount: number;
   expense_date: string;
   payment_mode: "Cash" | "UPI";
+  item: string;
 }
+
+// --- Helper function for formatting date ---
+const formatDate = (dateStr: string | Date) => {
+  const d = new Date(dateStr);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0"); // month is 0-based
+  const year = d.getFullYear();
+  return `${day} ${month} ${year}`; // "DD MM YYYY"
+};
 
 const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
  
@@ -71,7 +81,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       // Expenditures
       const { data: expData, error: expError } = await supabase
         .from("expenditures")
-        .select("amount, date, payment_mode")
+        .select("amount, date, payment_mode, item")
         .eq("cafe_id", cafeId)
         .order("date", { ascending: false });
 
@@ -81,6 +91,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
             amount: parseFloat(e.amount),
             expense_date: e.date,
             payment_mode: e.payment_mode,
+            item: e.item,
           }))
         );
       }
@@ -168,6 +179,8 @@ const expensesByUPI = filteredExpenditures
   .filter((e) => e.payment_mode === "UPI")
   .reduce((sum, e) => sum + e.amount, 0);
 
+  const netProfitByCash = salesByCash - expensesByCash;
+  const netProfitByUPI = salesByUPI - expensesByUPI;
 
   // CSV download
   const downloadCSV = () => {
@@ -175,12 +188,21 @@ const expensesByUPI = filteredExpenditures
       ["Item", "Quantity Sold", "Amount"],
       ...itemSales.map((i) => [i.name, i.quantity.toString(), i.amount.toString()]),
       [],
-      ["Expenditure Amount", "Expense Date"],
-      ...filteredExpenditures.map((e) => [e.amount.toString(), new Date(e.expense_date).toLocaleDateString()]),
+      ["Expenditures"],
+      ["Item", "Amount", "Date", "Payment Mode"],
+      ...filteredExpenditures.map((e) => [
+        e.item,
+        e.amount.toString(),
+        new Date(e.expense_date).toLocaleDateString(),
+        e.payment_mode,
+      ]),
       [],
       ["Revenue", revenue.toString()],
       ["Expenses", expenses.toString()],
       ["Profit", profit.toString()],
+      ["Net Profit (Cash)", netProfitByCash.toString()],
+      ["Net Profit (UPI)", netProfitByUPI.toString()],
+
     ];
     const csvContent = rows.map((r) => r.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -188,86 +210,224 @@ const expensesByUPI = filteredExpenditures
   };
 
   // PDF download
-  const downloadPDF = () => {
-    const doc = new jsPDF();
-    let y = 20;
-    const leftMargin = 14;
-    const rowHeight = 10;
-    const colWidths = [80, 40, 40];
+const downloadPDF = async () => {
+  // Fetch cafe name
+  let cafeName = "Cafe"; // fallback
+  if (cafeId) {
+    const { data, error } = await supabase
+      .from("cafes")
+      .select("name")
+      .eq("id", cafeId)
+      .single();
+    if (!error && data) cafeName = data.name;
+  }
 
+  // Create jsPDF instance
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const leftMargin = 40;
+  const rightMargin = 40;
+  const tableWidth = pageWidth - leftMargin - rightMargin; // auto scale to page
+  const reservedFooterSpace = 50;
+  const totalPagesExp = "{total_pages_count_string}";
+  let y = 60;
+
+  // --- Header ---
+  const addHeader = () => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text(cafeName, pageWidth / 2, 40, { align: "center" });
     doc.setFontSize(14);
-    doc.text("Sales Report", leftMargin, y);
-    y += 10;
+    doc.text("Sales Report", pageWidth / 2, 60, { align: "center" });
+    y = 80;
+  };
 
-    let dateText = "Date: ";
-    if (filter === "range" && customStart && customEnd) {
-      dateText += `${customStart} to ${customEnd}`;
-    } else {
-      dateText += filter.charAt(0).toUpperCase() + filter.slice(1);
+  // --- Footer ---
+ const addFooter = (pageNum: number) => {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const footerY = pageHeight - 20;
+
+  // Line above footer
+  doc.setDrawColor(150);
+  doc.setLineWidth(0.2);
+  doc.line(40, footerY - 10, pageWidth - 40, footerY - 10);
+
+  // Footer text
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  const footerText = `Page ${pageNum} of ${totalPagesExp}`;
+
+  doc.text(footerText, pageWidth / 2, footerY, { align: "center" });
+};
+
+
+  // --- Page break check ---
+  const checkPageBreak = (neededSpace = 0) => {
+    if (y + neededSpace > pageHeight - reservedFooterSpace) {
+      addFooter(doc.internal.getNumberOfPages());
+      doc.addPage();
+      addHeader();
     }
-    doc.setFontSize(11);
-    doc.text(dateText, leftMargin, y);
-    y += 8;
+  };
 
-    const drawTable = (title: string, headers: string[], data: (string | number)[][]) => {
-      doc.setFontSize(12);
-      doc.text(title, leftMargin, y);
-      y += 6;
+  addHeader();
+
+  // --- Date Text ---
+let dateText = "Date: ";
+if (filter === "range" && customStart && customEnd) {
+  const start = formatDate(customStart).replace(/ /g, "-");
+  const end = formatDate(customEnd).replace(/ /g, "-");
+  dateText += start === end ? start : `${start} to ${end}`;
+} else if (filter === "today") {
+  dateText += formatDate(customStart || new Date());
+} else if (filter === "week") {
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  dateText += `${formatDate(startOfWeek)} to ${formatDate(endOfWeek)}`;
+} else if (filter === "month") {
+  const now = new Date();
+  dateText += `${now.toLocaleString("default", { month: "long" })} ${now.getFullYear()}`;
+} else if (filter === "year") {
+  dateText += new Date().getFullYear().toString();
+}
+
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  checkPageBreak(20);
+  doc.text(dateText, leftMargin, y);
+  y += 30;
+
+  // --- Table Function ---
+  const drawTable = (title: string, headers: string[], data: (string | number)[][]) => {
+    const lineHeight = 14;
+    const cellPadding = 4;
+
+    checkPageBreak(40);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text(title, leftMargin, y);
+    y += 20;
+
+    const colCount = headers.length;
+    const colWidths = headers.map(() => tableWidth / colCount); // auto scale
+
+    // Header row
+    let x = leftMargin;
+    const headerHeight = lineHeight + cellPadding * 2;
+    headers.forEach((h, i) => {
+      doc.rect(x, y, colWidths[i], headerHeight);
+      doc.setFont("helvetica", "bold");
+      const headerY = y + headerHeight / 2 + lineHeight / 2 - 2;
+      doc.text(String(h), x + cellPadding, headerY);
+      x += colWidths[i];
+    });
+    y += headerHeight;
+
+    // Data rows
+    doc.setFont("helvetica", "normal");
+    data.forEach((row) => {
+      let maxRowHeight = lineHeight + cellPadding * 2;
+      const wrappedTexts: string[][] = [];
+
+      row.forEach((cell, i) => {
+        const wrapped = doc.splitTextToSize(String(cell ?? "-"), colWidths[i] - cellPadding * 2);
+        wrappedTexts.push(wrapped);
+        const cellHeight = wrapped.length * lineHeight + cellPadding * 2;
+        if (cellHeight > maxRowHeight) maxRowHeight = cellHeight;
+      });
+
+      checkPageBreak(maxRowHeight);
 
       let x = leftMargin;
-      headers.forEach((h, i) => {
-        doc.rect(x, y, colWidths[i], rowHeight);
-        doc.text(h.toString(), x + 2, y + 7);
+      wrappedTexts.forEach((lines, i) => {
+        doc.rect(x, y, colWidths[i], maxRowHeight);
+        const totalTextHeight = lines.length * lineHeight;
+        const startY = y + (maxRowHeight - totalTextHeight) / 2 + lineHeight / 2;
+
+        lines.forEach((line, j) => {
+          doc.text(line, x + cellPadding, startY + j * lineHeight);
+        });
         x += colWidths[i];
       });
-      y += rowHeight;
 
-      data.forEach((row) => {
-        let x = leftMargin;
-        row.forEach((cell, i) => {
-          doc.rect(x, y, colWidths[i], rowHeight);
-          doc.text(cell.toString(), x + 2, y + 7);
-          x += colWidths[i];
-        });
-        y += rowHeight;
-        if (y > 270) {
-          doc.addPage();
-          y = 20;
-        }
-      });
-      y += 6;
-    };
+      y += maxRowHeight;
+    });
 
-    drawTable(
-      "Items Sold",
-      ["Item", "Quantity Sold", "Amount (₹)"],
-      itemSales.map((i) => [i.name, i.quantity, i.amount])
-    );
-
-    drawTable(
-      "Expenditures",
-      ["Expenditure Amount", "Expense Date"],
-      filteredExpenditures.map((e) => [e.amount, new Date(e.expense_date).toLocaleDateString()])
-    );
-
-    y += 10;
-    doc.setFontSize(14);
-    doc.text(`Revenue: ₹${revenue.toFixed(2)}`, 14, y);
-    y += 8;
-    doc.text(`Cash: ₹${salesByCash.toFixed(2)}`, 14, y);
-    y += 8;
-    doc.text(`UPI: ₹${salesByUPI.toFixed(2)}`, 14, y);
-    y += 8;
-    doc.text(`Expenses (Cash): ₹${expensesByCash.toFixed(2)}`, 14, y); 
-    y += 8;
-    doc.text(`Expenses (UPI): ₹${expensesByUPI.toFixed(2)}`, 14, y); 
-    y += 8;
-    doc.text(`Total Expenses: ₹${expenses.toFixed(2)}`, 14, y);
-    y += 8;
-    doc.text(`Net Profit: ₹${profit.toFixed(2)}`, 14, y);
-
-    doc.save("sales_report.pdf");
+    y += 20;
   };
+
+  // --- Tables ---
+  drawTable(
+    "Items Sold",
+    ["Item", "Quantity Sold", "Amount (Rs)"],
+    itemSales.map((i) => [i.name, i.quantity, ` ${i.amount}`])
+  );
+
+  drawTable(
+    "Expenditures",
+    ["Item", "Amount (Rs)", "Date", "Payment Mode"], // added Payment Mode
+    filteredExpenditures.map((e) => [
+      e.item ?? "-",
+      `${e.amount}`,
+      new Date(e.expense_date).toLocaleDateString(),
+      e.payment_mode ?? "-", // ensure value exists
+    ])
+  );
+
+  drawTable("Summary", ["Label", "Value (Rs)"], [
+    ["Revenue", revenue.toFixed(2)],
+    ["Cash Sales", salesByCash.toFixed(2)],
+    ["UPI Sales", salesByUPI.toFixed(2)],
+    ["Expenses (Cash)", expensesByCash.toFixed(2)],
+    ["Expenses (UPI)", expensesByUPI.toFixed(2)],
+    ["Total Expenses", expenses.toFixed(2)],
+    ["Net Bal (Cash)", (salesByCash - expensesByCash).toFixed(2)],
+    ["Net Bal (UPI)", (salesByUPI - expensesByUPI).toFixed(2)],
+    ["Net Profit (Total)", profit.toFixed(2)],
+  ]);
+
+  // --- Footer for all pages ---
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    addFooter(i);
+  }
+  doc.putTotalPages(totalPagesExp);
+
+  // --- Dynamic filename ---
+let fileDatePart = "";
+if (filter === "range" && customStart && customEnd) {
+  const start = formatDate(customStart).replace(/ /g, "-");
+  const end = formatDate(customEnd).replace(/ /g, "-");
+  fileDatePart = start === end ? start : `${start}_to_${end}`;
+} else if (filter === "today") {
+  fileDatePart = formatDate(customStart || new Date()).replace(/ /g, "-");
+} else if (filter === "week") {
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  fileDatePart = `${formatDate(startOfWeek).replace(/ /g, "-")}_to_${formatDate(endOfWeek).replace(/ /g, "-")}`;
+} else if (filter === "month") {
+  const now = new Date();
+  fileDatePart = `${now.toLocaleString("default", { month: "long" })}_${now.getFullYear()}`;
+} else if (filter === "year") {
+  fileDatePart = new Date().getFullYear().toString();
+}
+
+const fileName = `sales_report_${fileDatePart}.pdf`;
+doc.save(fileName);
+
+};
+
+
 
   return (
     <div style={{ padding: "1rem" }}>
@@ -318,15 +478,19 @@ const expensesByUPI = filteredExpenditures
       <table border={1} cellPadding={5} style={{ borderCollapse: "collapse", marginBottom: "1rem" }}>
         <thead>
           <tr>
+            <th>Item</th>
             <th>Amount</th>
             <th>Date</th>
+            <th>Payment Mode</th>
           </tr>
         </thead>
         <tbody>
           {filteredExpenditures.map((e, idx) => (
             <tr key={idx}>
+              <td>{e.item}</td>
               <td>{e.amount}</td>
               <td>{new Date(e.expense_date).toLocaleDateString()}</td>
+              <td>{e.payment_mode}</td>
             </tr>
           ))}
         </tbody>
@@ -341,6 +505,9 @@ const expensesByUPI = filteredExpenditures
       <p>Expenses (Cash): ₹{expensesByCash.toFixed(2)}</p>
       <p>Expenses (UPI): ₹{expensesByUPI.toFixed(2)}</p>
       <p>Net Profit: ₹{profit.toFixed(2)}</p>
+      <p>Net Bal (Cash): ₹{netProfitByCash.toFixed(2)}</p>
+      <p>Net Bal (UPI): ₹{netProfitByUPI.toFixed(2)}</p>
+
 
       {/* Downloads */}
       <button onClick={downloadCSV}>⬇ Download CSV</button>
