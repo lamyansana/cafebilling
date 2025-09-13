@@ -232,7 +232,7 @@ function Master({ cafeId, role }: MasterProps) {
                 element={<CenterPane addToCart={addToCart} />}
               />
               <Route path="/past-orders" element={<ViewPastOrders role={role}/>} />
-              {role === "admin" || role === "viewer" && (
+              {(role === "admin" || role === "viewer") && (
                 <Route
                   path="/sales-report"
                   element={<SalesReport cafeId={cafeId} />}

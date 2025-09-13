@@ -42,7 +42,7 @@ const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen, role }) => {
 
 
             {/* Only show for admin */}
-            {role === "admin" || role === "viewer" && (
+            {(role === "admin" || role === "viewer") && (
               <NavLink
                 to="/sales-report"
                 className={({ isActive }) =>
@@ -52,6 +52,7 @@ const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen, role }) => {
                 Sales Report
               </NavLink>
             )}
+
 
 
             
