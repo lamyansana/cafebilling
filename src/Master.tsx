@@ -13,7 +13,7 @@ import Expenditure from "./Expenditure";
 
 interface MasterProps {
   cafeId: number | null;
-  role: "admin" | "staff";
+  role: "admin" | "staff" | "viewer";
 }
 
 export interface MenuItem {
@@ -231,8 +231,8 @@ function Master({ cafeId, role }: MasterProps) {
                 path="/menu/*"
                 element={<CenterPane addToCart={addToCart} />}
               />
-              <Route path="/past-orders" element={<ViewPastOrders />} />
-              {role === "admin" && (
+              <Route path="/past-orders" element={<ViewPastOrders role={role}/>} />
+              {role === "admin" || role === "viewer" && (
                 <Route
                   path="/sales-report"
                   element={<SalesReport cafeId={cafeId} />}
@@ -240,7 +240,7 @@ function Master({ cafeId, role }: MasterProps) {
               )}
               <Route
                 path="/expenditure"
-                element={<Expenditure cafeId={cafeId} />}
+                element={<Expenditure cafeId={cafeId} role={role} />}
               />
             </Routes>
           </div>

@@ -5,13 +5,13 @@ import { useNavigate } from "react-router-dom";
 
 interface ProfileRow {
   cafe_id: number;
-  role: "admin" | "staff";
+  role: "admin" | "staff" | "viewer";
 }
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [cafeId, setCafeId] = useState<number | null>(null);
-  const [role, setRole] = useState<"admin" | "staff" | null>(null);
+  const [role, setRole] = useState<"admin" | "staff" | "viewer" |null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

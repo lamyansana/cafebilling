@@ -1,43 +1,50 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "./supabaseClient"; // adjust path if needed
+import { supabase } from "./supabaseClient";
+
+interface OrdersProps {
+  role?: "admin" | "staff" | "viewer";
+}
 
 type Order = {
   id: number;
   created_at: string;
   total_amount: number;
   payment_mode: string;
-  items: { item_name: string; quantity: number }[];
+  items: { item_name: string; quantity: number; order_id: number }[];
 };
 
-const ViewPastOrders: React.FC = () => {
+const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
+  const isAdmin = role === "admin";
   const [filter, setFilter] = useState<"today" | "week" | "month" | "year" | "range">("today");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [pastOrders, setPastOrders] = useState<Order[]>([]);
+  const [editingItem, setEditingItem] = useState<{ orderId: number; itemName: string; quantity: number } | null>(null);
+  const [deleteItem, setDeleteItem] = useState<{ orderId: number; itemName: string } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
-  // 🔽 Load orders from Supabase
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  // Fetch orders
   useEffect(() => {
     const fetchOrders = async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select(
-          `
-          id,
-          created_at,
-          total_amount,
-          payment_mode,
-          order_items (
-            item_name,
-            quantity
-          )
-        `
-        )
+        .select(`id, created_at, total_amount, payment_mode, order_items (item_name, quantity, order_id)`)
         .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Error loading orders:", error);
+        setToast("Failed to load orders ❌");
         return;
       }
+
       if (data) {
         setPastOrders(
           data.map((o: any) => ({
@@ -54,46 +61,33 @@ const ViewPastOrders: React.FC = () => {
     fetchOrders();
   }, []);
 
-  // 🔍 Filtering
+  // Filter orders
   const filterOrders = (orders: Order[]) => {
-    if (orders.length === 0) return [];
     const now = new Date();
-
     return orders.filter((order) => {
       const orderDate = new Date(order.created_at);
-
       switch (filter) {
         case "today":
           return orderDate.toDateString() === now.toDateString();
-
         case "week": {
           const startOfWeek = new Date(now);
           startOfWeek.setDate(now.getDate() - now.getDay());
           startOfWeek.setHours(0, 0, 0, 0);
-
           const endOfWeek = new Date(startOfWeek);
           endOfWeek.setDate(startOfWeek.getDate() + 6);
           endOfWeek.setHours(23, 59, 59, 999);
-
           return orderDate >= startOfWeek && orderDate <= endOfWeek;
         }
-
         case "month":
-          return (
-            orderDate.getMonth() === now.getMonth() &&
-            orderDate.getFullYear() === now.getFullYear()
-          );
-
+          return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
         case "year":
           return orderDate.getFullYear() === now.getFullYear();
-
         case "range":
           if (!customStart || !customEnd) return true;
           const start = new Date(customStart);
           const end = new Date(customEnd);
           end.setHours(23, 59, 59, 999);
           return orderDate >= start && orderDate <= end;
-
         default:
           return true;
       }
@@ -102,11 +96,98 @@ const ViewPastOrders: React.FC = () => {
 
   const filteredOrders = filterOrders(pastOrders);
 
+  // Save updated quantity
+  const handleSaveQuantity = async (orderId: number, itemName: string, quantity: number) => {
+    if (!isAdmin) return;
+
+    const { error } = await supabase
+      .from("order_items")
+      .update({ quantity })
+      .eq("order_id", orderId)
+      .eq("item_name", itemName);
+
+    if (error) {
+      console.error("Update item error:", error.message);
+      setToast("Failed to update item ❌");
+      return;
+    }
+
+    const order = pastOrders.find((o) => o.id === orderId);
+    if (!order) return;
+    const updatedItems = order.items.map((it) =>
+      it.item_name === itemName ? { ...it, quantity } : it
+    );
+    const total_amount = updatedItems.reduce((sum, it) => sum + it.quantity, 0); // adjust if price info exists
+
+    await supabase
+      .from("orders")
+      .update({ total_amount })
+      .eq("id", orderId);
+
+    setPastOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId ? { ...o, items: updatedItems, total_amount } : o
+      )
+    );
+
+    setEditingItem(null);
+    setToast("Item updated ✅");
+  };
+
+  // Trigger delete confirmation
+  const handleDeleteClick = (orderId: number, itemName: string) => {
+    if (!isAdmin) return;
+    setDeleteItem({ orderId, itemName });
+  };
+
+  // Confirm deletion
+  const confirmDelete = async () => {
+    if (!deleteItem) return;
+    const { orderId, itemName } = deleteItem;
+
+    const { error } = await supabase
+      .from("order_items")
+      .delete()
+      .eq("order_id", orderId)
+      .eq("item_name", itemName);
+
+    if (error) {
+      console.error("Delete item error:", error.message);
+      setToast("Failed to delete item ❌");
+      setDeleteItem(null);
+      return;
+    }
+
+    const order = pastOrders.find((o) => o.id === orderId);
+    if (!order) return;
+
+    const updatedItems = order.items.filter((it) => it.item_name !== itemName);
+
+    if (updatedItems.length === 0) {
+      await supabase.from("orders").delete().eq("id", orderId);
+      setPastOrders((prev) => prev.filter((o) => o.id !== orderId));
+      setToast("Order deleted ✅");
+    } else {
+      const total_amount = updatedItems.reduce((sum, it) => sum + it.quantity, 0);
+      await supabase.from("orders").update({ total_amount }).eq("id", orderId);
+      setPastOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId ? { ...o, items: updatedItems, total_amount } : o
+        )
+      );
+      setToast("Item deleted ✅");
+    }
+
+    setDeleteItem(null);
+  };
+
+  const cancelDelete = () => setDeleteItem(null);
+
   return (
     <div>
       <h2>Past Orders</h2>
 
-      {/* Filter controls */}
+      {/* Filter */}
       <div style={{ marginBottom: "1rem" }}>
         <label>Filter: </label>
         <select value={filter} onChange={(e) => setFilter(e.target.value as any)}>
@@ -120,17 +201,9 @@ const ViewPastOrders: React.FC = () => {
         {filter === "range" && (
           <span style={{ marginLeft: "1rem" }}>
             From:{" "}
-            <input
-              type="date"
-              value={customStart}
-              onChange={(e) => setCustomStart(e.target.value)}
-            />
+            <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
             To:{" "}
-            <input
-              type="date"
-              value={customEnd}
-              onChange={(e) => setCustomEnd(e.target.value)}
-            />
+            <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
           </span>
         )}
       </div>
@@ -153,10 +226,34 @@ const ViewPastOrders: React.FC = () => {
                 <td>{new Date(order.created_at).toLocaleString()}</td>
                 <td>
                   {order.items.map((it, idx) => (
-                    <span key={idx}>
-                      {it.item_name} × {it.quantity}
-                      {idx < order.items.length - 1 ? ", " : ""}
-                    </span>
+                    <div key={idx} style={{ marginBottom: "4px" }}>
+                      {editingItem &&
+                      editingItem.orderId === order.id &&
+                      editingItem.itemName === it.item_name ? (
+                        <>
+                          <input
+                            type="number"
+                            min={1}
+                            value={editingItem.quantity}
+                            onChange={(e) =>
+                              setEditingItem({ ...editingItem, quantity: parseInt(e.target.value) })
+                            }
+                          />
+                          <button onClick={() => handleSaveQuantity(order.id, it.item_name, editingItem.quantity)}>💾</button>
+                          <button onClick={() => setEditingItem(null)}>❌</button>
+                        </>
+                      ) : (
+                        <>
+                          {it.item_name} × {it.quantity}
+                          {isAdmin && (
+                            <>
+                              <button style={{ marginLeft: "8px" }} onClick={() => setEditingItem({ orderId: order.id, itemName: it.item_name, quantity: it.quantity })}>✏️</button>
+                              <button style={{ marginLeft: "4px" }} onClick={() => handleDeleteClick(order.id, it.item_name)}>🗑️</button>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
                   ))}
                 </td>
                 <td>₹{order.total_amount}</td>
@@ -167,6 +264,40 @@ const ViewPastOrders: React.FC = () => {
         </table>
       ) : (
         <p>No orders found for this filter.</p>
+      )}
+
+      {/* Toast */}
+{toast && (
+  <div
+    style={{
+      position: "fixed",
+      top: "20px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      padding: "10px 20px",
+      background: "#333",
+      color: "#fff",
+      borderRadius: "5px",
+      zIndex: 1000,
+    }}
+  >
+    {toast}
+  </div>
+)}
+
+
+      {/* Delete Confirmation Modal */}
+      {deleteItem && (
+        <div style={{
+          position: "fixed", top:0, left:0, width:"100%", height:"100%",
+          background:"rgba(0,0,0,0.5)", display:"flex", justifyContent:"center", alignItems:"center"
+        }}>
+          <div style={{ background:"#fff", padding:"20px", borderRadius:"8px", minWidth:"300px" }}>
+            <p>Are you sure you want to delete <strong>{deleteItem.itemName}</strong>?</p>
+            <button onClick={confirmDelete}>Yes</button>
+            <button onClick={cancelDelete} style={{ marginLeft:"10px" }}>No</button>
+          </div>
+        </div>
       )}
     </div>
   );

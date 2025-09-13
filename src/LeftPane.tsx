@@ -5,7 +5,7 @@ import "./App.css"
 interface LeftPaneProps {
   isOpen: boolean
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
-  role: "admin" | "staff";
+  role: "admin" | "staff" | "viewer";
 }
 
 const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen, role }) => {
@@ -42,7 +42,7 @@ const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen, role }) => {
 
 
             {/* Only show for admin */}
-            {role === "admin" && (
+            {role === "admin" || role === "viewer" && (
               <NavLink
                 to="/sales-report"
                 className={({ isActive }) =>
