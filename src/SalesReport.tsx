@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
+import { formatDate } from "./formatDate";
 
 interface SalesReportProps {
   //session: any;
@@ -26,21 +27,16 @@ type Expenditure = {
 }
 
 // --- Helper function for formatting date ---
-const formatDate = (dateStr: string | Date) => {
-  const d = new Date(dateStr);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0"); // month is 0-based
-  const year = d.getFullYear();
-  return `${day} ${month} ${year}`; // "DD MM YYYY"
-};
 
 const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
  
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenditures, setExpenditures] = useState<Expenditure[]>([]);
-  const [filter, setFilter] = useState<"today" | "week" | "month" | "year" | "range">("today");
+  const [filter, setFilter] = useState<"today" | "week" | "month" | "year" | "date" | "range">("today");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
+  const today = new Date().toISOString().split("T")[0];
+  const [selectedDate, setSelectedDate] = useState(today);
 
   useEffect(() => {
     if (!cafeId) return; // Avoid fetching if cafeId is null
@@ -123,6 +119,8 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       case "year":
         return d.getFullYear() === now.getFullYear();
+      case "date":
+        return d.toDateString() === new Date(selectedDate).toDateString();
       case "range":
         if (!customStart || !customEnd) return true;
         const start = new Date(customStart);
@@ -193,7 +191,7 @@ const expensesByUPI = filteredExpenditures
       ...filteredExpenditures.map((e) => [
         e.item,
         e.amount.toString(),
-        new Date(e.expense_date).toLocaleDateString(),
+        formatDate(e.expense_date),
         e.payment_mode,
       ]),
       [],
@@ -295,6 +293,10 @@ if (filter === "range" && customStart && customEnd) {
 } else if (filter === "year") {
   dateText += new Date().getFullYear().toString();
 }
+else if (filter === "date") {
+  dateText += formatDate(selectedDate);
+}
+
 
 
   doc.setFont("helvetica", "normal");
@@ -375,7 +377,7 @@ if (filter === "range" && customStart && customEnd) {
     filteredExpenditures.map((e) => [
       e.item ?? "-",
       `${e.amount}`,
-      new Date(e.expense_date).toLocaleDateString(),
+      formatDate(e.expense_date),
       e.payment_mode ?? "-", // ensure value exists
     ])
   );
@@ -421,6 +423,10 @@ if (filter === "range" && customStart && customEnd) {
 } else if (filter === "year") {
   fileDatePart = new Date().getFullYear().toString();
 }
+else if (filter === "date") {
+  fileDatePart = formatDate(selectedDate).replace(/ /g, "-");
+}
+
 
 const fileName = `sales_report_${fileDatePart}.pdf`;
 doc.save(fileName);
@@ -441,8 +447,21 @@ doc.save(fileName);
           <option value="week">This Week</option>
           <option value="month">This Month</option>
           <option value="year">This Year</option>
+          <option value="date">Select Date</option> 
           <option value="range">Custom Range</option>
         </select>
+
+        {filter === "date" && (
+          <span style={{ marginLeft: "1rem" }}>
+            Date:{" "}
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+          </span>
+        )}
+
 
         {filter === "range" && (
           <span style={{ marginLeft: "1rem" }}>
@@ -489,7 +508,7 @@ doc.save(fileName);
             <tr key={idx}>
               <td>{e.item}</td>
               <td>{e.amount}</td>
-              <td>{new Date(e.expense_date).toLocaleDateString()}</td>
+              <td>{formatDate(e.expense_date)}</td>
               <td>{e.payment_mode}</td>
             </tr>
           ))}

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
+import {formatDate} from "./formatDate"
+
+
 
 interface OrdersProps {
   role?: "admin" | "staff" | "viewer";
@@ -10,18 +13,28 @@ type Order = {
   created_at: string;
   total_amount: number;
   payment_mode: string;
-  items: { item_name: string; quantity: number; order_id: number }[];
+  items: { item_name: string; quantity: number; order_id: number; price: number }[];
 };
 
 const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
+  const today = new Date().toISOString().split("T")[0]; // yyyy-mm-dd format for <input type="date">
   const isAdmin = role === "admin";
-  const [filter, setFilter] = useState<"today" | "week" | "month" | "year" | "range">("today");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
+  const [filter, setFilter] = useState<"today" | "week" | "month" | "year" | "date" | "range">("today");
+  const [customStart, setCustomStart] = useState(today);
+  const [customEnd, setCustomEnd] = useState(today);
+  const [selectedDate, setSelectedDate] = useState(today);
   const [pastOrders, setPastOrders] = useState<Order[]>([]);
   const [editingItem, setEditingItem] = useState<{ orderId: number; itemName: string; quantity: number } | null>(null);
   const [deleteItem, setDeleteItem] = useState<{ orderId: number; itemName: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+   useEffect(() => {
+    if (filter === "range") {
+      const today = new Date().toISOString().split("T")[0];
+      setCustomStart(today);
+      setCustomEnd(today);
+    }
+  }, [filter]);
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -36,7 +49,7 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
     const fetchOrders = async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select(`id, created_at, total_amount, payment_mode, order_items (item_name, quantity, order_id)`)
+        .select(`id, created_at, total_amount, payment_mode, order_items (item_name, quantity, order_id, price)`)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -82,6 +95,8 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
           return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
         case "year":
           return orderDate.getFullYear() === now.getFullYear();
+        case "date":
+          return orderDate.toDateString() === new Date(selectedDate).toDateString();
         case "range":
           if (!customStart || !customEnd) return true;
           const start = new Date(customStart);
@@ -117,7 +132,7 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
     const updatedItems = order.items.map((it) =>
       it.item_name === itemName ? { ...it, quantity } : it
     );
-    const total_amount = updatedItems.reduce((sum, it) => sum + it.quantity, 0); // adjust if price info exists
+    const total_amount = updatedItems.reduce((sum, it) => sum + it.quantity*(it.price ?? 0), 0); // adjust if price info exists
 
     await supabase
       .from("orders")
@@ -168,7 +183,7 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
       setPastOrders((prev) => prev.filter((o) => o.id !== orderId));
       setToast("Order deleted ✅");
     } else {
-      const total_amount = updatedItems.reduce((sum, it) => sum + it.quantity, 0);
+      const total_amount = updatedItems.reduce((sum, it) => sum + it.quantity*(it.price ?? 0), 0);
       await supabase.from("orders").update({ total_amount }).eq("id", orderId);
       setPastOrders((prev) =>
         prev.map((o) =>
@@ -195,8 +210,21 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
           <option value="week">This Week</option>
           <option value="month">This Month</option>
           <option value="year">This Year</option>
+           <option value="date">Select Date</option>
           <option value="range">Custom Range</option>
         </select>
+
+        {filter === "date" && (
+          <span style={{ marginLeft: "1rem" }}>
+            Date:{" "}
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+          </span>
+        )}
+
 
         {filter === "range" && (
           <span style={{ marginLeft: "1rem" }}>
@@ -223,7 +251,7 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
             {filteredOrders.map((order) => (
               <tr key={order.id}>
                 <td>{order.id}</td>
-                <td>{new Date(order.created_at).toLocaleString()}</td>
+                <td>{formatDate(order.created_at)}</td>
                 <td>
                   {order.items.map((it, idx) => (
                     <div key={idx} style={{ marginBottom: "4px" }}>

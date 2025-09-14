@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
+import { formatDate } from "./formatDate";
 
 interface ExpenditureProps {
   cafeId: number | null;
@@ -211,8 +212,23 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
       </div>
 
       {/* Add/Edit Form */}
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: "10px", maxWidth: "600px", marginBottom: "20px" }}>
-        <select name="category" value={form.category} onChange={handleChange} required>
+      <form onSubmit={handleSubmit} style={{  display: "grid", 
+    gap: "15px", 
+    maxWidth: "500px", 
+    marginBottom: "20px",
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fafafa",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}>
+        <select name="category" value={form.category} onChange={handleChange} required style={{
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "6px",
+    fontSize: "14px",
+    width: "100%",
+    boxSizing: "border-box"
+  }}>
           <option value="">Select Category</option>
           <option value="Veg">Veg</option>
           <option value="Meat">Meat</option>
@@ -222,17 +238,113 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
           <option value="Utilities">Utilities</option>
           <option value="Misc">Misc</option>
         </select>
-        <input type="text" name="item" placeholder="Item" value={form.item} onChange={handleChange} required />
-        <input type="number" name="rate" placeholder="Rate (₹)" value={form.rate} onChange={handleChange} required />
-        <input type="number" name="quantity" placeholder="Quantity" value={form.quantity} onChange={handleChange} required />
-        <input type="number" name="amount" placeholder="Amount" value={form.amount} readOnly />
-        <input type="date" name="date" value={form.date} onChange={handleChange} required />
-        <div>
-          <label><input type="radio" name="payment_mode" value="Cash" checked={form.payment_mode === "Cash"} onChange={handleChange}/> Cash</label>
-          <label style={{ marginLeft: "20px" }}><input type="radio" name="payment_mode" value="UPI" checked={form.payment_mode === "UPI"} onChange={handleChange}/> UPI</label>
-        </div>
-        <button type="submit">{editingId ? "💾 Save Changes" : "➕ Add Expense"}</button>
-        {editingId && <button type="button" onClick={handleCancel}>❌ Cancel</button>}
+        <input type="text" name="item" placeholder="Item" value={form.item} onChange={handleChange} required  style={{
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "6px",
+    fontSize: "14px",
+    width: "100%",
+    boxSizing: "border-box"
+  }}/>
+        <input type="number" name="rate" placeholder="Rate (₹)" value={form.rate} onChange={handleChange} required style={{
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "6px",
+    fontSize: "14px",
+    width: "100%",
+    boxSizing: "border-box"
+  }}/>
+        <input type="number" name="quantity" placeholder="Quantity" value={form.quantity} onChange={handleChange} required style={{
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "6px",
+    fontSize: "14px",
+    width: "100%",
+    boxSizing: "border-box"
+  }}/>
+        <input type="number" name="amount" placeholder="Amount" value={form.amount} readOnly style={{
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "6px",
+    fontSize: "14px",
+    width: "100%",
+    boxSizing: "border-box"
+  }}/>
+        <input type="date" name="date" value={form.date} onChange={handleChange} required style={{
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "6px",
+    fontSize: "14px",
+    width: "100%",
+    boxSizing: "border-box"
+  }}/>
+        <div style={{ display: "flex", gap: "10px" }}>
+  <label
+    style={{
+      padding: "8px 15px",
+      border: "1px solid #ccc",
+      borderRadius: "6px",
+      cursor: "pointer",
+      background: form.payment_mode === "Cash" ? "#007bff" : "#f9f9f9",
+      color: form.payment_mode === "Cash" ? "#fff" : "#333",
+      fontWeight: form.payment_mode === "Cash" ? "bold" : "normal",
+      transition: "all 0.2s ease",
+    }}
+  >
+    <input
+      type="radio"
+      name="payment_mode"
+      value="Cash"
+      checked={form.payment_mode === "Cash"}
+      onChange={handleChange}
+      style={{ display: "none" }}
+    />
+    Cash
+  </label>
+
+  <label
+    style={{
+      padding: "8px 15px",
+      border: "1px solid #ccc",
+      borderRadius: "6px",
+      cursor: "pointer",
+      background: form.payment_mode === "UPI" ? "#007bff" : "#f9f9f9",
+      color: form.payment_mode === "UPI" ? "#fff" : "#333",
+      fontWeight: form.payment_mode === "UPI" ? "bold" : "normal",
+      transition: "all 0.2s ease",
+    }}
+  >
+    <input
+      type="radio"
+      name="payment_mode"
+      value="UPI"
+      checked={form.payment_mode === "UPI"}
+      onChange={handleChange}
+      style={{ display: "none" }}
+    />
+    UPI
+  </label>
+</div>
+
+        <button type="submit"  style={{
+    background: "#007e4eff",
+    color: "#fff",
+    padding: "10px 15px",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "14px"
+  }}>{editingId ? "💾 Save Changes" : "+ Add Expense"}</button>
+        {editingId && <button type="button" onClick={handleCancel} style={{
+      background: "#dc3545",
+      color: "#fff",
+      padding: "10px 15px",
+      border: "none",
+      borderRadius: "6px",
+      cursor: "pointer",
+      fontSize: "14px",
+      marginLeft: "10px"
+    }}>❌ Cancel</button>}
       </form>
 
       {/* Expenditure Table */}
@@ -254,7 +366,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
               <td>{exp.rate.toFixed(2)}</td>
               <td>{exp.quantity}</td>
               <td>{exp.amount.toFixed(2)}</td>
-              <td>{exp.date}</td>
+              <td>{formatDate(exp.date)}</td>
               <td>{exp.payment_mode}</td>
               {isAdmin && <td>
                 <button onClick={()=>handleEdit(exp)}>✏️</button>
