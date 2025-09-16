@@ -1,7 +1,7 @@
 import { useState } from "react";
-import {  Routes, Route, Navigate } from "react-router-dom";
+import {  Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { supabase } from "./supabaseClient";
-
+import "./App.css"
 import LeftPane from "./LeftPane";
 import CenterPane from "./CenterPane";
 import RightPane from "./RightPane";
@@ -14,6 +14,7 @@ import Expenditure from "./Expenditure";
 interface MasterProps {
   cafeId: number | null;
   role: "admin" | "staff" | "viewer";
+  handleLogout: () => void;
 }
 
 export interface MenuItem {
@@ -45,7 +46,10 @@ const createNewOrder = (count = 1): PendingOrder => ({
   isSubmitted: false,
 });
 
-function Master({ cafeId, role }: MasterProps) {
+function Master({ cafeId, role, handleLogout }: MasterProps) {
+  const location = useLocation(); // 👈 get current route
+  const isMenuPage = location.pathname.startsWith("/menu");
+
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([
     createNewOrder(1),
   ]);
@@ -215,7 +219,14 @@ function Master({ cafeId, role }: MasterProps) {
   return (
     <>
       <div className="container">
-        <LeftPane isOpen={isLeftOpen} setIsOpen={setIsLeftOpen} role={role} />
+      {/* Left Pane + Backdrop */}
+      {isLeftOpen && (
+        <div
+          className="backdrop"
+          onClick={() => setIsLeftOpen(false)} // close on outside click
+        />
+      )}
+        <LeftPane isOpen={isLeftOpen} setIsOpen={setIsLeftOpen} role={role} handleLogout={handleLogout}/>
 
         <div
           className="center-right"
@@ -231,20 +242,30 @@ function Master({ cafeId, role }: MasterProps) {
                 path="/menu/*"
                 element={<CenterPane addToCart={addToCart} />}
               />
-              <Route path="/past-orders" element={<ViewPastOrders role={role}/>} />
+              <Route path="/past-orders" element={
+                <div className="page-wrapper">
+                  <ViewPastOrders role={role} />
+                </div>} />
               {(role === "admin" || role === "viewer") && (
                 <Route
                   path="/sales-report"
-                  element={<SalesReport cafeId={cafeId} />}
+                  element={
+                  <div className="page-wrapper">
+                    <SalesReport cafeId={cafeId} />
+                  </div>}
                 />
               )}
               <Route
                 path="/expenditure"
-                element={<Expenditure cafeId={cafeId} role={role} />}
+                element={
+                <div className="page-wrapper">
+                  <Expenditure cafeId={cafeId} role={role} />
+                </div>}
               />
             </Routes>
           </div>
 
+          {isMenuPage && (
           <RightPane
             orders={pendingOrders}
             activeOrderId={activeOrderId}
@@ -257,6 +278,8 @@ function Master({ cafeId, role }: MasterProps) {
             submitOrder={submitOrder}
             deleteOrder={deleteOrder}
           />
+        )}
+
         </div>
       </div>
 

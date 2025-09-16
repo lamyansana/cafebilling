@@ -6,9 +6,10 @@ interface LeftPaneProps {
   isOpen: boolean
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
   role: "admin" | "staff" | "viewer";
+  handleLogout: () => void;
 }
 
-const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen, role }) => {
+const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen, role, handleLogout }) => {
   return (
     <div className={`left-pane ${isOpen ? "open" : "collapsed"}`}>
       {/* ✅ Toggle button - always visible */}
@@ -69,6 +70,23 @@ const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen, role }) => {
               Orders (coming soon)
             </button>
           </nav>
+          <div style={{ marginTop: "auto", padding: "1rem 0" }}>
+  <button
+    onClick={handleLogout}
+    style={{
+      width: "100%",
+      padding: "0.5rem",
+      backgroundColor: "#f44336",
+      color: "white",
+      border: "none",
+      borderRadius: "4px",
+      cursor: "pointer",
+    }}
+  >
+    Logout
+  </button>
+</div>
+
         </>
       )}
     </div>

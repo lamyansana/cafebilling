@@ -227,7 +227,9 @@ const downloadPDF = async () => {
   const leftMargin = 40;
   const rightMargin = 40;
   const tableWidth = pageWidth - leftMargin - rightMargin; // auto scale to page
+  const reservedHeaderSpace = 80;  // enough for cafe name + report title
   const reservedFooterSpace = 50;
+
   const totalPagesExp = "{total_pages_count_string}";
   let y = 60;
 
@@ -238,7 +240,8 @@ const downloadPDF = async () => {
     doc.text(cafeName, pageWidth / 2, 40, { align: "center" });
     doc.setFontSize(14);
     doc.text("Sales Report", pageWidth / 2, 60, { align: "center" });
-    y = 80;
+    // Reset cursor after header
+    y = reservedHeaderSpace; 
   };
 
   // --- Footer ---
@@ -267,12 +270,16 @@ const downloadPDF = async () => {
       addFooter(doc.internal.getNumberOfPages());
       doc.addPage();
       addHeader();
+      y = reservedHeaderSpace; //reset header space
+
+       doc.setFont("helvetica", "normal");
     }
   };
 
   addHeader();
 
   // --- Date Text ---
+  checkPageBreak(30);
 let dateText = "Date: ";
 if (filter === "range" && customStart && customEnd) {
   const start = formatDate(customStart).replace(/ /g, "-");
@@ -306,63 +313,86 @@ else if (filter === "date") {
   y += 30;
 
   // --- Table Function ---
-  const drawTable = (title: string, headers: string[], data: (string | number)[][]) => {
-    const lineHeight = 14;
-    const cellPadding = 4;
+const drawTable = (title: string, headers: string[], data: (string | number)[][]) => {
+  const lineHeight = 14;
+  const cellPadding = 4;
 
-    checkPageBreak(40);
+  checkPageBreak(40);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text(title, leftMargin, y);
+  y += 20;
+
+  const colCount = headers.length;
+  const colWidths = headers.map(() => tableWidth / colCount); // auto scale
+
+  // --- Header row ---
+  let x = leftMargin;
+  const headerHeight = lineHeight + cellPadding * 2;
+  headers.forEach((h, i) => {
+    doc.rect(x, y, colWidths[i], headerHeight);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text(title, leftMargin, y);
-    y += 20;
+    const headerY = y + headerHeight / 2 + lineHeight / 2 - 2;
+    doc.text(String(h), x + cellPadding, headerY);
+    x += colWidths[i];
+  });
+  y += headerHeight;
 
-    const colCount = headers.length;
-    const colWidths = headers.map(() => tableWidth / colCount); // auto scale
+  doc.setFont("helvetica", "normal");
 
-    // Header row
-    let x = leftMargin;
-    const headerHeight = lineHeight + cellPadding * 2;
-    headers.forEach((h, i) => {
-      doc.rect(x, y, colWidths[i], headerHeight);
-      doc.setFont("helvetica", "bold");
-      const headerY = y + headerHeight / 2 + lineHeight / 2 - 2;
-      doc.text(String(h), x + cellPadding, headerY);
-      x += colWidths[i];
-    });
-    y += headerHeight;
+  // --- Data rows ---
+  data.forEach((row) => {
+    // 🔹 Handle page break BEFORE calculating wrapped text
+    if (y + lineHeight + cellPadding * 2 > pageHeight - reservedFooterSpace) {
+      addFooter(doc.internal.getNumberOfPages());
+      doc.addPage();
+      addHeader();
 
-    // Data rows
-    doc.setFont("helvetica", "normal");
-    data.forEach((row) => {
-      let maxRowHeight = lineHeight + cellPadding * 2;
-      const wrappedTexts: string[][] = [];
-
-      row.forEach((cell, i) => {
-        const wrapped = doc.splitTextToSize(String(cell ?? "-"), colWidths[i] - cellPadding * 2);
-        wrappedTexts.push(wrapped);
-        const cellHeight = wrapped.length * lineHeight + cellPadding * 2;
-        if (cellHeight > maxRowHeight) maxRowHeight = cellHeight;
-      });
-
-      checkPageBreak(maxRowHeight);
-
+      // redraw headers
       let x = leftMargin;
-      wrappedTexts.forEach((lines, i) => {
-        doc.rect(x, y, colWidths[i], maxRowHeight);
-        const totalTextHeight = lines.length * lineHeight;
-        const startY = y + (maxRowHeight - totalTextHeight) / 2 + lineHeight / 2;
-
-        lines.forEach((line, j) => {
-          doc.text(line, x + cellPadding, startY + j * lineHeight);
-        });
+      headers.forEach((h, i) => {
+        doc.rect(x, y, colWidths[i], headerHeight);
+        doc.setFont("helvetica", "bold");
+        const headerY = y + headerHeight / 2 + lineHeight / 2 - 2;
+        doc.text(String(h), x + cellPadding, headerY);
         x += colWidths[i];
       });
+      y += headerHeight;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+    }
 
-      y += maxRowHeight;
+    // 🔹 Now wrap text after page context is stable
+    const wrappedTexts: string[][] = [];
+    let maxRowHeight = lineHeight + cellPadding * 2;
+
+    row.forEach((cell, i) => {
+      const wrapped = doc.splitTextToSize(String(cell ?? "-"), colWidths[i] - cellPadding * 2);
+      wrappedTexts.push(wrapped);
+      const cellHeight = wrapped.length * lineHeight + cellPadding * 2;
+      if (cellHeight > maxRowHeight) maxRowHeight = cellHeight;
     });
 
-    y += 20;
-  };
+    // draw row
+    let x = leftMargin;
+    wrappedTexts.forEach((lines, i) => {
+      doc.rect(x, y, colWidths[i], maxRowHeight);
+      const totalTextHeight = lines.length * lineHeight;
+      const startY = y + (maxRowHeight - totalTextHeight) / 2 + lineHeight / 2;
+
+      lines.forEach((line, j) => {
+        doc.text(line, x + cellPadding, startY + j * lineHeight);
+      });
+      x += colWidths[i];
+    });
+
+    y += maxRowHeight;
+  });
+
+  y += 20;
+};
+
+
 
   // --- Tables ---
   drawTable(
@@ -382,7 +412,8 @@ else if (filter === "date") {
     ])
   );
 
-  drawTable("Summary", ["Label", "Value (Rs)"], [
+  drawTable("Summary", ["Label", "Value"], [
+    ["Total Orders", filteredOrders.length],
     ["Revenue", revenue.toFixed(2)],
     ["Cash Sales", salesByCash.toFixed(2)],
     ["UPI Sales", salesByUPI.toFixed(2)],
@@ -391,7 +422,7 @@ else if (filter === "date") {
     ["Total Expenses", expenses.toFixed(2)],
     ["Net Bal (Cash)", (salesByCash - expensesByCash).toFixed(2)],
     ["Net Bal (UPI)", (salesByUPI - expensesByUPI).toFixed(2)],
-    ["Net Profit (Total)", profit.toFixed(2)],
+    ["Net Balance (Total)", profit.toFixed(2)],
   ]);
 
   // --- Footer for all pages ---

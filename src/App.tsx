@@ -9,6 +9,7 @@ interface ProfileRow {
 }
 
 const App: React.FC = () => {
+  const [cafeName, setCafeName] = useState("Cafe Dashboard"); // default/fallback
   const [user, setUser] = useState<any>(null);
   const [cafeId, setCafeId] = useState<number | null>(null);
   const [role, setRole] = useState<"admin" | "staff" | "viewer" |null>(null);
@@ -18,6 +19,32 @@ const App: React.FC = () => {
   const [initializing, setInitializing] = useState(true);
 
   const navigate = useNavigate();
+
+  const fetchCafeName = async (id: number) => {
+  try {
+    const { data, error } = await supabase
+      .from("cafes")
+      .select("name")
+      .eq("id", id)
+      .single();
+
+    if (data && !error) {
+      setCafeName(data.name);
+    } else {
+      console.error("Error fetching cafe name:", error);
+    }
+  } catch (err) {
+    console.error("Unexpected error fetching cafe name:", err);
+  }
+};
+
+
+    useEffect(() => {
+      if (cafeId !== null) {
+        fetchCafeName(cafeId);
+      }
+    }, [cafeId]);
+
 
   // Restore session on page load
   useEffect(() => {
@@ -162,16 +189,26 @@ const App: React.FC = () => {
 
   // Render Master when logged in
   return (
-    <div style={{ padding: "2rem" }}>
-      <button
-        onClick={handleLogout}
-        style={{ marginBottom: "1rem", padding: "0.5rem 1rem", backgroundColor: "#f44336", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
-      >
-        Logout
-      </button>
+    
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw" }}>
+  {/* Top text/header */}
+  <div style={{
+    backgroundColor: "#f0f4f8",
+    padding: "0.5rem 1rem",
+    textAlign: "center",
+    fontWeight: "bold",
+    fontSize: "1rem"
+  }}>
+     {cafeName} Dashboard!
+  </div>
 
-      <Master cafeId={cafeId!} role={role!} />
-    </div>
+  {/* Main content fills remaining space */}
+  <div style={{ flexGrow: 1, display: "flex" }}>
+    {/* Your LeftPane and Master layout here */}
+    <Master cafeId={cafeId!} role={role!} handleLogout={handleLogout} />
+  </div>
+</div>
+
   );
 };
 
