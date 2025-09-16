@@ -32,6 +32,7 @@ function RightPane({
 
   return (
     <div className="right-pane">
+      <h2 style={{ textAlign: "center", margin: 0}}>🛒CART</h2>
       {/* 🔹 Order Tabs */}
       <div className="order-tabs">
         {orders.map((order) => (
@@ -40,6 +41,7 @@ function RightPane({
             className={`tab-btn ${order.id === activeOrderId ? "active" : ""}`}
             style={{
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
               gap: "6px",
               padding: "6px 10px",
@@ -87,7 +89,7 @@ function RightPane({
       {/* 🔹 Active Order Content */}
       {activeOrder ? (
         <>
-          <h2>{activeOrder.name}</h2>
+          <h3>{activeOrder.name}</h3>
 
           {activeOrder.cart.length === 0 ? (
             <p>No items yet</p>
@@ -96,14 +98,17 @@ function RightPane({
               <ul>
                 {activeOrder.cart.map((item) => (
                   <li key={item.id} className="cart-item">
-                    <span>{item.name}</span>
-                    <span>₹{item.price}</span>
+                    <div className="item-info">
+                      <span className="item-name">{item.name}</span>
+                      <span className="item-price">₹{item.price}</span>
+                    </div>
                     <div className="cart-controls">
                       <button onClick={() => decrementQuantity(item.id)}>-</button>
                       <span>{item.quantity}</span>
                       <button onClick={() => incrementQuantity(item.id)}>+</button>
                     </div>
                   </li>
+
                 ))}
               </ul>
               <h3>Total: ₹{total}</h3>
@@ -111,38 +116,29 @@ function RightPane({
               {/* 🔹 Payment Mode Selection */}
               <div className="payment-modes">
                 <h4>Select Payment Mode:</h4>
-                <label
-                  className={`payment-option ${
-                    activeOrder.paymentMode === "Cash" ? "active" : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name={`payment-${activeOrder.id}`}
-                    value="Cash"
-                    checked={activeOrder.paymentMode === "Cash"}
-                    onChange={(e) =>
-                      setPaymentMode(e.target.value as "Cash" | "UPI")
-                    }
-                  />
-                  <span>Cash</span>
-                </label>
-                <label
-                  className={`payment-option ${
-                    activeOrder.paymentMode === "UPI" ? "active" : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name={`payment-${activeOrder.id}`}
-                    value="UPI"
-                    checked={activeOrder.paymentMode === "UPI"}
-                    onChange={(e) =>
-                      setPaymentMode(e.target.value as "Cash" | "UPI")
-                    }
-                  />
-                  <span>UPI</span>
-                </label>
+                <div className="payment-modes-row">
+    <label className={`payment-option ${activeOrder.paymentMode === "Cash" ? "active" : ""}`}>
+      <input
+        type="radio"
+        name={`payment-${activeOrder.id}`}
+        value="Cash"
+        checked={activeOrder.paymentMode === "Cash"}
+        onChange={(e) => setPaymentMode(e.target.value as "Cash" | "UPI")}
+      />
+      <span>Cash</span>
+    </label>
+
+    <label className={`payment-option ${activeOrder.paymentMode === "UPI" ? "active" : ""}`}>
+      <input
+        type="radio"
+        name={`payment-${activeOrder.id}`}
+        value="UPI"
+        checked={activeOrder.paymentMode === "UPI"}
+        onChange={(e) => setPaymentMode(e.target.value as "Cash" | "UPI")}
+      />
+      <span>UPI</span>
+    </label>
+  </div>
               </div>
 
               {!activeOrder.isSubmitted && (

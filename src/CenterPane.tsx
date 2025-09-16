@@ -19,54 +19,67 @@ function CenterPane({ addToCart }: CenterPaneProps) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [customItem, setCustomItem] = useState({ name: "", price: "", category: "" });
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const location = useLocation();
   const cafeId = 1; // replace with your cafe ID
 
   // Fetch menu items from Supabase
   const fetchMenuItems = async () => {
-  const { data, error } = await supabase
-    .from("menu_items")
-    .select("*")
-    .eq("cafe_id", cafeId)
-    .order("category", { ascending: true })
-    .order("name", { ascending: true });
+    const { data, error } = await supabase
+      .from("menu_items")
+      .select("*")
+      .eq("cafe_id", cafeId)
+      .order("category", { ascending: true })
+      .order("name", { ascending: true });
 
-  if (error) {
-    console.error("Error fetching menu items:", error.message);
-    return;
-  }
+    if (error) {
+      console.error("Error fetching menu items:", error.message);
+      return;
+    }
 
-  const items: MenuItem[] = (data || []).map((item: any) => ({
-    id: item.id,
-    name: item.name,
-    price: item.price,
-    category: item.category,
-  }));
+    const items: MenuItem[] = (data || []).map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      category: item.category,
+    }));
 
-  setMenuItems(items);
+    setMenuItems(items);
 
-  // ✅ Exclude "Custom" from categories
-  const uniqueCategories = Array.from(
-    new Set(items.map(i => i.category))
-  ).filter(cat => cat.toLowerCase() !== "custom");
+    // Exclude "Custom" from categories
+    const uniqueCategories = Array.from(
+      new Set(items.map(i => i.category))
+    ).filter(cat => cat.toLowerCase() !== "custom");
 
-  setCategories(uniqueCategories);
-};
-
+    setCategories(uniqueCategories);
+  };
 
   useEffect(() => {
     fetchMenuItems();
   }, []);
 
-  // ✅ Reset custom form every time you land on /menu/custom
+  // Reset custom form every time you land on /menu/custom
   useEffect(() => {
     if (location.pathname.endsWith("/menu/custom")) {
       setCustomItem({ name: "", price: "", category: "" });
     }
   }, [location.pathname]);
 
-  // ✅ Add a custom item ONLY to cart (not database)
+  // Toast auto-hide
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  const handleAddToCart = (item: MenuItem) => {
+    addToCart(item);
+    setToastMessage(`${item.name} added to cart`);
+  };
+
+  // Add a custom item ONLY to cart (not database)
   const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customItem.name || !customItem.price) {
@@ -82,7 +95,7 @@ function CenterPane({ addToCart }: CenterPaneProps) {
       isCustom: true,
     };
 
-    addToCart(newItem); // just goes to cart
+    handleAddToCart(newItem); // toast included
     setCustomItem({ name: "", price: "", category: "" }); // reset form
   };
 
@@ -135,7 +148,7 @@ function CenterPane({ addToCart }: CenterPaneProps) {
                     <div key={item.id} className="menu-card">
                       <h4>{item.name}</h4>
                       <p>₹{item.price}</p>
-                      <button onClick={() => addToCart(item)}>Add to Cart</button>
+                      <button onClick={() => handleAddToCart(item)}>Add to Cart</button>
                     </div>
                   ))}
                 </div>
@@ -175,6 +188,28 @@ function CenterPane({ addToCart }: CenterPaneProps) {
           }
         />
       </Routes>
+
+      {/* TOAST */}
+      {toastMessage && (
+        <div
+          style={{
+          position: "fixed",
+      top: "20px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      backgroundColor: "#6a0dad", // dark purple
+      color: "#fffacd",            // light yellow
+      padding: "12px 20px",
+      borderRadius: "8px",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+      zIndex: 2000,
+      fontWeight: "bold",
+      textAlign: "center",
+          }}
+        >
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 }

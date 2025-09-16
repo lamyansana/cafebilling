@@ -66,3 +66,56 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Default light mode */
+.app-container {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  .app-container {
+    background-color: #121212; /* dark gray/black background */
+    color: #f5f5f5; /* light gray text */
+  }
+
+  .app-container h1,
+  .app-container h2,
+  .app-container h3,
+  .app-container h4,
+  .app-container h5,
+  .app-container h6,
+  .app-container p,
+  .app-container label,
+  .app-container span,
+  .app-container td,
+  .app-container th {
+    color: #f5f5f5 !important; /* force white-ish text */
+  }
+
+  .app-container table {
+    background-color: #1e1e1e;
+    border-color: #444;
+  }
+
+  .app-container th {
+    background-color: #2a2a2a;
+    font-weight: bold;
+  }
+
+  .app-container td {
+    background-color: #1c1c1c;
+  }
+
+  /* Buttons in dark mode */
+  .app-container button {
+    background-color: #333;
+    color: #f5f5f5;
+    border: 1px solid #555;
+  }
+
+  .app-container button:hover {
+    background-color: #444;
+  }
+}

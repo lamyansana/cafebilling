@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {  Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { supabase } from "./supabaseClient";
-import "./App.css"
 import LeftPane from "./LeftPane";
 import CenterPane from "./CenterPane";
 import RightPane from "./RightPane";
@@ -10,6 +9,7 @@ import SalesReport from "./SalesReport";
 import Toast from "./Toast";
 import ConfirmModal from "./ConfirmModal";
 import Expenditure from "./Expenditure";
+import "./App.css"
 
 interface MasterProps {
   cafeId: number | null;
@@ -50,12 +50,26 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
   const location = useLocation(); // 👈 get current route
   const isMenuPage = location.pathname.startsWith("/menu");
 
-  const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([
-    createNewOrder(1),
-  ]);
-  const [activeOrderId, setActiveOrderId] = useState<number | null>(
-    pendingOrders.length > 0 ? pendingOrders[0].id : null
-  );
+  // Load pending orders from localStorage or fallback to one new order
+const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>(() => {
+  const stored = localStorage.getItem("pendingOrders");
+  return stored ? JSON.parse(stored) : [createNewOrder(1)];
+});
+
+// Load active order from localStorage or fallback to first order
+const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
+  const storedActive = localStorage.getItem("activeOrderId");
+  if (storedActive) return JSON.parse(storedActive);
+
+  const storedOrders = localStorage.getItem("pendingOrders");
+  if (storedOrders) {
+    const parsed: PendingOrder[] = JSON.parse(storedOrders);
+    return parsed.length > 0 ? parsed[0].id : null;
+  }
+  return null;
+});
+
+
   const [toast, setToast] = useState<string | null>(null);
   const [isLeftOpen, setIsLeftOpen] = useState(true);
   const [confirmModal, setConfirmModal] = useState<{
@@ -65,6 +79,21 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
     isOpen: false,
     orderId: null,
   });
+
+// Keep pendingOrders in sync with localStorage
+useEffect(() => {
+  localStorage.setItem("pendingOrders", JSON.stringify(pendingOrders));
+}, [pendingOrders]);
+
+// Keep activeOrderId in sync with localStorage
+useEffect(() => {
+  if (activeOrderId !== null) {
+    localStorage.setItem("activeOrderId", JSON.stringify(activeOrderId));
+  } else {
+    localStorage.removeItem("activeOrderId");
+  }
+}, [activeOrderId]);
+
 
   // ➕ Create new order tab
   const addNewOrder = () => {
@@ -243,14 +272,14 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
                 element={<CenterPane addToCart={addToCart} />}
               />
               <Route path="/past-orders" element={
-                <div className="page-wrapper">
+                <div className="centered-content">
                   <ViewPastOrders role={role} />
                 </div>} />
               {(role === "admin" || role === "viewer") && (
                 <Route
                   path="/sales-report"
                   element={
-                  <div className="page-wrapper">
+                  <div className="centered-content">
                     <SalesReport cafeId={cafeId} />
                   </div>}
                 />
@@ -258,7 +287,7 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
               <Route
                 path="/expenditure"
                 element={
-                <div className="page-wrapper">
+                <div className="centered-content">
                   <Expenditure cafeId={cafeId} role={role} />
                 </div>}
               />

@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import { formatDate } from "./formatDate";
+import "./App.css"
 
 interface SalesReportProps {
   //session: any;
@@ -37,6 +38,41 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
   const [customEnd, setCustomEnd] = useState("");
   const today = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState(today);
+
+
+  /////Dark Mode
+  const [isDark, setIsDark] = useState(false);
+
+useEffect(() => {
+  const updateDark = () => {
+    setIsDark(document.body.classList.contains("dark"));
+  };
+
+  // run once on mount
+  updateDark();
+
+  // observe class changes on body
+  const observer = new MutationObserver(updateDark);
+  observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+
+  return () => observer.disconnect();
+}, []);
+
+
+  // Dark/light styles
+  const containerStyle: React.CSSProperties = {
+    backgroundColor: isDark ? "#121212" : "#ffffff",
+    color: isDark ? "#f1f1f1" : "#000000",
+    padding: "1rem",
+    minHeight: "100vh",
+  };
+
+  const headingStyle: React.CSSProperties = {
+    color: isDark ? "#ffffff" : "#222222",
+  };
+
+  ////////////////////
+
 
   useEffect(() => {
     if (!cafeId) return; // Avoid fetching if cafeId is null
@@ -467,12 +503,12 @@ doc.save(fileName);
 
 
   return (
-    <div style={{ padding: "1rem" }}>
-      <h2>📊 Sales Report</h2>
+    <div style={containerStyle}>
+      <h2 style={headingStyle}>📊 Sales Report</h2>
 
       {/* Date Filters */}
-      <div style={{ marginBottom: "1rem" }}>
-        <label>Filter: </label>
+      <div style={headingStyle}>
+        <label style={headingStyle}>Filter: </label>
         <select value={filter} onChange={(e) => setFilter(e.target.value as any)}>
           <option value="today">Today</option>
           <option value="week">This Week</option>
@@ -503,7 +539,7 @@ doc.save(fileName);
       </div>
 
       {/* Item-wise Table */}
-      <h3>Item-wise Sales</h3>
+      <h3 style={headingStyle}>Item-wise Sales</h3>
       <table border={1} cellPadding={5} style={{ borderCollapse: "collapse", marginBottom: "1rem" }}>
         <thead>
           <tr>
@@ -524,7 +560,7 @@ doc.save(fileName);
       </table>
 
       {/* Expenditures Table */}
-      <h3>Expenditures</h3>
+      <h3  style={headingStyle} >Expenditures</h3>
       <table border={1} cellPadding={5} style={{ borderCollapse: "collapse", marginBottom: "1rem" }}>
         <thead>
           <tr>
@@ -547,17 +583,18 @@ doc.save(fileName);
       </table>
 
       {/* Summary */}
-      <h3>Summary</h3>
-      <p>Revenue: ₹{revenue.toFixed(2)}</p>
-      <p>Cash: ₹{salesByCash.toFixed(2)}</p>
-      <p>UPI: ₹{salesByUPI.toFixed(2)}</p>
-      <p>Total Expenses: ₹{expenses.toFixed(2)}</p>
-      <p>Expenses (Cash): ₹{expensesByCash.toFixed(2)}</p>
-      <p>Expenses (UPI): ₹{expensesByUPI.toFixed(2)}</p>
-      <p>Net Profit: ₹{profit.toFixed(2)}</p>
-      <p>Net Bal (Cash): ₹{netProfitByCash.toFixed(2)}</p>
-      <p>Net Bal (UPI): ₹{netProfitByUPI.toFixed(2)}</p>
-
+      <div style={{ color: isDark ? "#e0e0e0" : "#333" }}>
+      <h3 style={headingStyle}>Summary</h3>
+      <p  style={headingStyle}>Revenue: ₹{revenue.toFixed(2)}</p>
+      <p  style={headingStyle}>Cash: ₹{salesByCash.toFixed(2)}</p>
+      <p  style={headingStyle}>UPI: ₹{salesByUPI.toFixed(2)}</p>
+      <p  style={headingStyle}>Total Expenses: ₹{expenses.toFixed(2)}</p>
+      <p  style={headingStyle}>Expenses (Cash): ₹{expensesByCash.toFixed(2)}</p>
+      <p  style={headingStyle}>Expenses (UPI): ₹{expensesByUPI.toFixed(2)}</p>
+      <p  style={headingStyle}>Net Profit: ₹{profit.toFixed(2)}</p>
+      <p  style={headingStyle}>Net Bal (Cash): ₹{netProfitByCash.toFixed(2)}</p>
+      <p  style={headingStyle}>Net Bal (UPI): ₹{netProfitByUPI.toFixed(2)}</p>
+      </div>
 
       {/* Downloads */}
       <button onClick={downloadCSV}>⬇ Download CSV</button>

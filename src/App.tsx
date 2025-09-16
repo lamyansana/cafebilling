@@ -9,6 +9,7 @@ interface ProfileRow {
 }
 
 const App: React.FC = () => {
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const [cafeName, setCafeName] = useState("Cafe Dashboard"); // default/fallback
   const [user, setUser] = useState<any>(null);
   const [cafeId, setCafeId] = useState<number | null>(null);
@@ -188,28 +189,30 @@ const App: React.FC = () => {
   }
 
   // Render Master when logged in
-  return (
+  
+return (
+  <div className={prefersDark ? "dark-mode" : ""} 
+       style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw" }}>
     
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw" }}>
-  {/* Top text/header */}
-  <div style={{
-    backgroundColor: "#f0f4f8",
-    padding: "0.5rem 1rem",
-    textAlign: "center",
-    fontWeight: "bold",
-    fontSize: "1rem"
-  }}>
-     {cafeName} Dashboard!
-  </div>
+    {/* Top text/header */}
+    <div style={{
+      backgroundColor: prefersDark ? "#1e1e1e" : "#f0f4f8",
+      color: prefersDark ? "#f5f5f5" : "#000",
+      padding: "0.5rem 1rem",
+      textAlign: "center",
+      fontWeight: "bold",
+      fontSize: "1rem"
+    }}>
+       {cafeName} Dashboard!
+    </div>
 
-  {/* Main content fills remaining space */}
-  <div style={{ flexGrow: 1, display: "flex" }}>
-    {/* Your LeftPane and Master layout here */}
-    <Master cafeId={cafeId!} role={role!} handleLogout={handleLogout} />
+    {/* Main content fills remaining space */}
+    <div style={{ flexGrow: 1, display: "flex" }}>
+      {/* LeftPane + Master layout */}
+      <Master cafeId={cafeId!} role={role!} handleLogout={handleLogout} />
+    </div>
   </div>
-</div>
-
-  );
+);
 };
 
 export default App;
