@@ -110,7 +110,17 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
   };
 
   const filteredOrders = filterOrders(pastOrders);
-  const grandTotal = filteredOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+  // Compute totals
+const totals = filteredOrders.reduce(
+  (acc, order) => {
+    acc.grand += order.total_amount;
+    if (order.payment_mode === "Cash") acc.cash += order.total_amount;
+    if (order.payment_mode === "UPI") acc.upi += order.total_amount;
+    return acc;
+  },
+  { grand: 0, cash: 0, upi: 0 }
+);
+
 
   // Save updated quantity
   const handleSaveQuantity = async (orderId: number, itemName: string, quantity: number) => {
@@ -330,21 +340,12 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
         </div>
       )}
 </div>
-    <div
-  style={{
-    marginTop: "10px",
-    fontWeight: "bold",
-    textAlign: "left",
-    color: 'black',
-    backgroundColor: 'grey',
-
-  }}
->
-  Grand Total: ₹{grandTotal}
-</div>
-
-    </div>
-    
+  <div>
+  <p>Grand Total: ₹{totals.grand}</p>
+  <p>Cash Total: ₹{totals.cash}</p>
+  <p>UPI Total: ₹{totals.upi}</p>
+  </div> 
+</div>  
   );
 };
 

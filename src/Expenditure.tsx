@@ -219,9 +219,9 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
     padding: "20px",
     border: "1px solid #ddd",
     borderRadius: "8px",
-    background: "#fafafa",
+    background: "#161515ff",
     boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}>
-        <select name="category" value={form.category} onChange={handleChange} required style={{
+    <select name="category" value={form.category} onChange={handleChange} required style={{
     padding: "10px",
     border: "1px solid #ccc",
     borderRadius: "6px",
@@ -348,7 +348,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
       </form>
 
       {/* Expenditure Table */}
-      <table border={1} cellPadding={8} style={{ borderCollapse: "collapse", width: "100%" }}>
+      <table border={1} cellPadding={8} className="exp-table">
         <thead>
           <tr>
             <th>ID</th><th>Category</th><th>Item</th><th>Rate</th><th>Qty</th><th>Amount</th><th>Date</th><th>Payment Mode</th>
@@ -377,7 +377,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
           {filteredExpenses.length > 0 && <>
             <tr style={{ fontWeight:"bold"}}><td colSpan={5}>Cash Total</td><td>{cashTotal.toFixed(2)}</td><td colSpan={isAdmin?3:2}></td></tr>
             <tr style={{ fontWeight:"bold"}}><td colSpan={5}>UPI Total</td><td>{upiTotal.toFixed(2)}</td><td colSpan={isAdmin?3:2}></td></tr>
-            <tr style={{ fontWeight:"bold", backgroundColor:"#f0f0f0"}}><td colSpan={5}>Grand Total</td><td>{total.toFixed(2)}</td><td colSpan={isAdmin?3:2}></td></tr>
+            <tr style={{ fontWeight:"bold"}}><td colSpan={5}>Grand Total</td><td>{total.toFixed(2)}</td><td colSpan={isAdmin?3:2}></td></tr>
           </>}
         </tbody>
       </table>
@@ -388,7 +388,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
       {/* Delete Confirmation Modal */}
       {deleteId !== null && (
         <div style={{ position:"fixed", top:0,left:0,width:"100%",height:"100%", background:"rgba(0,0,0,0.5)", display:"flex", justifyContent:"center", alignItems:"center" }}>
-          <div style={{ background:"#fff", padding:"20px", borderRadius:"8px", minWidth:"300px" }}>
+          <div style={{ background:"#695353ff", padding:"20px", borderRadius:"8px", minWidth:"300px" }}>
             <p>Are you sure you want to delete this expense?</p>
             <button onClick={confirmDelete}>Yes</button>
             <button onClick={cancelDelete} style={{ marginLeft:"10px" }}>No</button>

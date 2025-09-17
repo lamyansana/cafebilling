@@ -692,8 +692,9 @@ table {
 
 
  .pst-bg, .exp-bg, .sales-bg{
-  background-color: #68788dff;
+  background-color: #1d1e1fff;
   color: #4a4294ff;
+  font-weight: bold;
 }
 
   {
