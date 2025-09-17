@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react"
 import { supabase } from "./supabaseClient"
 
+interface MenuItemsProps {
+  //session: any;
+  cafeId: number | null;
+  role: "admin" | "staff" | "viewer";
+}
+
 interface MenuItem {
   id: number
   name: string
@@ -8,7 +14,7 @@ interface MenuItem {
   category?: string
 }
 
-const MenuItems = () => {
+const MenuItems: React.FC<MenuItemsProps> = ({ cafeId }) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -23,7 +29,6 @@ const MenuItems = () => {
   const [editPrice, setEditPrice] = useState("")
   const [editCategory, setEditCategory] = useState("")
 
-  const cafeId = 1 // for now, fixed cafe_id. Later -> dynamic from auth/session
 
   // Fetch menu items
   const fetchMenuItems = async () => {

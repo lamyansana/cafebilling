@@ -65,6 +65,18 @@ const LeftPane: React.FC<LeftPaneProps> = ({ isOpen, setIsOpen, role, handleLogo
             >
               Expenditure
             </NavLink>
+            
+            {(role === "admin") && (
+            <NavLink
+              to="/menu-items"
+              className={({ isActive }) =>
+                isActive ? "active-link" : "inactive-link"
+              }
+            >
+              🍽️ Menu Items
+            </NavLink>
+            )}
+
 
             <button className="disabled-btn" disabled>
               Orders (coming soon)

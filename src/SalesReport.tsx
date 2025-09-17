@@ -34,9 +34,9 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenditures, setExpenditures] = useState<Expenditure[]>([]);
   const [filter, setFilter] = useState<"today" | "week" | "month" | "year" | "date" | "range">("today");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
   const today = new Date().toISOString().split("T")[0];
+  const [customStart, setCustomStart] = useState(today);
+  const [customEnd, setCustomEnd] = useState(today);
   const [selectedDate, setSelectedDate] = useState(today);
 
 
@@ -60,16 +60,8 @@ useEffect(() => {
 
 
   // Dark/light styles
-  const containerStyle: React.CSSProperties = {
-    backgroundColor: isDark ? "#121212" : "#ffffff",
-    color: isDark ? "#f1f1f1" : "#000000",
-    padding: "1rem",
-    minHeight: "100vh",
-  };
 
-  const headingStyle: React.CSSProperties = {
-    color: isDark ? "#ffffff" : "#222222",
-  };
+
 
   ////////////////////
 
@@ -503,13 +495,23 @@ doc.save(fileName);
 
 
   return (
-    <div style={containerStyle}>
-      <h2 style={headingStyle}>📊 Sales Report</h2>
+    <div className="sales-bg">
+      <h2 >📊 Sales Report</h2>
 
       {/* Date Filters */}
-      <div style={headingStyle}>
-        <label style={headingStyle}>Filter: </label>
-        <select value={filter} onChange={(e) => setFilter(e.target.value as any)}>
+      <div >
+        <label >Filter: </label>
+        <select value={filter}
+          onChange={(e) => {
+            const val = e.target.value as typeof filter;
+            setFilter(val);
+
+            if (val === "range") {
+              const today = new Date().toISOString().split("T")[0];
+              setCustomStart(today);
+              setCustomEnd(today);
+            }
+          }}>
           <option value="today">Today</option>
           <option value="week">This Week</option>
           <option value="month">This Month</option>
@@ -539,7 +541,7 @@ doc.save(fileName);
       </div>
 
       {/* Item-wise Table */}
-      <h3 style={headingStyle}>Item-wise Sales</h3>
+      <h3 >Item-wise Sales</h3>
       <table border={1} cellPadding={5} style={{ borderCollapse: "collapse", marginBottom: "1rem" }}>
         <thead>
           <tr>
@@ -560,7 +562,9 @@ doc.save(fileName);
       </table>
 
       {/* Expenditures Table */}
-      <h3  style={headingStyle} >Expenditures</h3>
+      <h3 >Expenditures</h3>
+      <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+      
       <table border={1} cellPadding={5} style={{ borderCollapse: "collapse", marginBottom: "1rem" }}>
         <thead>
           <tr>
@@ -581,19 +585,19 @@ doc.save(fileName);
           ))}
         </tbody>
       </table>
-
+      </div>
       {/* Summary */}
       <div style={{ color: isDark ? "#e0e0e0" : "#333" }}>
-      <h3 style={headingStyle}>Summary</h3>
-      <p  style={headingStyle}>Revenue: ₹{revenue.toFixed(2)}</p>
-      <p  style={headingStyle}>Cash: ₹{salesByCash.toFixed(2)}</p>
-      <p  style={headingStyle}>UPI: ₹{salesByUPI.toFixed(2)}</p>
-      <p  style={headingStyle}>Total Expenses: ₹{expenses.toFixed(2)}</p>
-      <p  style={headingStyle}>Expenses (Cash): ₹{expensesByCash.toFixed(2)}</p>
-      <p  style={headingStyle}>Expenses (UPI): ₹{expensesByUPI.toFixed(2)}</p>
-      <p  style={headingStyle}>Net Profit: ₹{profit.toFixed(2)}</p>
-      <p  style={headingStyle}>Net Bal (Cash): ₹{netProfitByCash.toFixed(2)}</p>
-      <p  style={headingStyle}>Net Bal (UPI): ₹{netProfitByUPI.toFixed(2)}</p>
+      <h3 >Summary</h3>
+      <p>Revenue: ₹{revenue.toFixed(2)}</p>
+      <p>Cash: ₹{salesByCash.toFixed(2)}</p>
+      <p>UPI: ₹{salesByUPI.toFixed(2)}</p>
+      <p>Total Expenses: ₹{expenses.toFixed(2)}</p>
+      <p>Expenses (Cash): ₹{expensesByCash.toFixed(2)}</p>
+      <p>Expenses (UPI): ₹{expensesByUPI.toFixed(2)}</p>
+      <p>Net Profit: ₹{profit.toFixed(2)}</p>
+      <p>Net Bal (Cash): ₹{netProfitByCash.toFixed(2)}</p>
+      <p>Net Bal (UPI): ₹{netProfitByUPI.toFixed(2)}</p>
       </div>
 
       {/* Downloads */}

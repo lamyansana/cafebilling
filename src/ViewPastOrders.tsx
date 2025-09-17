@@ -110,6 +110,7 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
   };
 
   const filteredOrders = filterOrders(pastOrders);
+  const grandTotal = filteredOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
 
   // Save updated quantity
   const handleSaveQuantity = async (orderId: number, itemName: string, quantity: number) => {
@@ -199,7 +200,8 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
   const cancelDelete = () => setDeleteItem(null);
 
   return (
-    <div>
+    <div className="pst-bg">
+    <div style={{ maxHeight: "500px", overflowY: "auto" }}>
       <h2>Past Orders</h2>
 
       {/* Filter */}
@@ -327,7 +329,22 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
           </div>
         </div>
       )}
+</div>
+    <div
+  style={{
+    marginTop: "10px",
+    fontWeight: "bold",
+    textAlign: "left",
+    color: 'black',
+    backgroundColor: 'grey',
+
+  }}
+>
+  Grand Total: ₹{grandTotal}
+</div>
+
     </div>
+    
   );
 };
 

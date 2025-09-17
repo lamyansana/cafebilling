@@ -10,6 +10,8 @@ import Toast from "./Toast";
 import ConfirmModal from "./ConfirmModal";
 import Expenditure from "./Expenditure";
 import "./App.css"
+import MenuItems from "./MenuItems";
+
 
 interface MasterProps {
   cafeId: number | null;
@@ -135,25 +137,34 @@ useEffect(() => {
 
   const switchOrder = (id: number) => setActiveOrderId(id);
 
+  
   // 🔹 Cart operations
-  const addToCart = (item: MenuItem) => {
-    setPendingOrders((prev) =>
-      prev.map((order) =>
-        order.id === activeOrderId
-          ? {
-              ...order,
-              cart: order.cart.find((c) => c.id === item.id)
-                ? order.cart.map((c) =>
-                    c.id === item.id
-                      ? { ...c, quantity: c.quantity + 1 }
-                      : c
-                  )
-                : [...order.cart, { ...item, quantity: 1 }],
-            }
-          : order
-      )
-    );
-  };
+const addToCart = (item: MenuItem) => {
+  if (!activeOrderId) {
+    setToast("⚠️ No active order. Please create one first!");
+    return;
+  }
+
+  setPendingOrders((prev) =>
+    prev.map((order) =>
+      order.id === activeOrderId
+        ? {
+            ...order,
+            cart: order.cart.find((c) => c.id === item.id)
+              ? order.cart.map((c) =>
+                  c.id === item.id
+                    ? { ...c, quantity: c.quantity + 1 }
+                    : c
+                )
+              : [...order.cart, { ...item, quantity: 1 }],
+          }
+        : order
+    )
+  );
+
+  setToast(`${item.name} added to cart! ✅`);
+};
+
 
   const incrementQuantity = (id: number) => {
     setPendingOrders((prev) =>
@@ -283,6 +294,8 @@ useEffect(() => {
                     <SalesReport cafeId={cafeId} />
                   </div>}
                 />
+
+                
               )}
               <Route
                 path="/expenditure"
@@ -291,7 +304,21 @@ useEffect(() => {
                   <Expenditure cafeId={cafeId} role={role} />
                 </div>}
               />
+              
+              {(role === "admin" ) && (
+                <Route
+                  path="/menu-items"
+                  element={
+                  <div className="centered-content">
+                    <MenuItems cafeId={cafeId} role={role}/>
+                  </div>}
+                />
+
+                
+              )}
+
             </Routes>
+            
           </div>
 
           {isMenuPage && (

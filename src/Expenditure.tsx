@@ -196,7 +196,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
   const upiTotal = filteredExpenses.filter(exp => exp.payment_mode === "UPI").reduce((sum, exp) => sum + exp.amount, 0);
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div className = "exp-bg">
       <h2>💰 Expenditure</h2>
 
       {/* Date & Filter */}

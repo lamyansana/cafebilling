@@ -19,7 +19,7 @@ function CenterPane({ addToCart }: CenterPaneProps) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [customItem, setCustomItem] = useState({ name: "", price: "", category: "" });
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  //const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const location = useLocation();
   const cafeId = 1; // replace with your cafe ID
@@ -66,17 +66,10 @@ function CenterPane({ addToCart }: CenterPaneProps) {
     }
   }, [location.pathname]);
 
-  // Toast auto-hide
-  useEffect(() => {
-    if (toastMessage) {
-      const timer = setTimeout(() => setToastMessage(null), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMessage]);
+
 
   const handleAddToCart = (item: MenuItem) => {
     addToCart(item);
-    setToastMessage(`${item.name} added to cart`);
   };
 
   // Add a custom item ONLY to cart (not database)
@@ -189,27 +182,7 @@ function CenterPane({ addToCart }: CenterPaneProps) {
         />
       </Routes>
 
-      {/* TOAST */}
-      {toastMessage && (
-        <div
-          style={{
-          position: "fixed",
-      top: "20px",
-      left: "50%",
-      transform: "translateX(-50%)",
-      backgroundColor: "#6a0dad", // dark purple
-      color: "#fffacd",            // light yellow
-      padding: "12px 20px",
-      borderRadius: "8px",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-      zIndex: 2000,
-      fontWeight: "bold",
-      textAlign: "center",
-          }}
-        >
-          {toastMessage}
-        </div>
-      )}
+      
     </div>
   );
 }
