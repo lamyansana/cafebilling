@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import {  Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 import LeftPane from "./LeftPane";
 import CenterPane from "./CenterPane";
@@ -9,9 +9,8 @@ import SalesReport from "./SalesReport";
 import Toast from "./Toast";
 import ConfirmModal from "./ConfirmModal";
 import Expenditure from "./Expenditure";
-import "./App.css"
+import "./App.css";
 import MenuItems from "./MenuItems";
-
 
 interface MasterProps {
   cafeId: number | null;
@@ -39,48 +38,43 @@ export interface PendingOrder {
   isSubmitted: boolean;
 }
 
-
-
-
-
 function Master({ cafeId, role, handleLogout }: MasterProps) {
   const location = useLocation(); // 👈 get current route
   const isMenuPage = location.pathname.startsWith("/menu/");
 
   // 🔹 Helper to create a new empty order
   const createNewOrder = (orders: PendingOrder[]): PendingOrder => {
-  const nextNumber = getNextOrderNumber(orders);
-  return {
-    id: Date.now(),                 // still unique for keys/state
-    name: `Order ${nextNumber}`,    // only display number
-    cart: [],
-    paymentMode: "Cash",
-    isSubmitted: false,
+    const nextNumber = getNextOrderNumber(orders);
+    return {
+      id: Date.now(), // still unique for keys/state
+      name: `Order ${nextNumber}`, // only display number
+      cart: [],
+      paymentMode: "Cash",
+      isSubmitted: false,
+    };
   };
-};
 
   // Load pending orders from localStorage or fallback to one new order
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>(() => {
-  const stored = localStorage.getItem("pendingOrders");
-  return stored ? JSON.parse(stored) : [createNewOrder([])];
-});
+    const stored = localStorage.getItem("pendingOrders");
+    return stored ? JSON.parse(stored) : [createNewOrder([])];
+  });
 
-// Load active order from localStorage or fallback to first order
+  // Load active order from localStorage or fallback to first order
   const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
-  const storedActive = localStorage.getItem("activeOrderId");
-  if (storedActive) return JSON.parse(storedActive);
+    const storedActive = localStorage.getItem("activeOrderId");
+    if (storedActive) return JSON.parse(storedActive);
 
-  const storedOrders = localStorage.getItem("pendingOrders");
-  if (storedOrders) {
-    const parsed: PendingOrder[] = JSON.parse(storedOrders);
-    return parsed.length > 0 ? parsed[0].id : null;
-  }
-  return null;
-});
-
+    const storedOrders = localStorage.getItem("pendingOrders");
+    if (storedOrders) {
+      const parsed: PendingOrder[] = JSON.parse(storedOrders);
+      return parsed.length > 0 ? parsed[0].id : null;
+    }
+    return null;
+  });
 
   const [toast, setToast] = useState<string | null>(null);
-  const [isLeftOpen, setIsLeftOpen] = useState(true);
+  const [isLeftOpen, setIsLeftOpen] = useState(() => window.innerWidth > 768);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     orderId: number | null;
@@ -101,32 +95,28 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
     return Math.max(...existing) + 1; // continue
   };
 
+  // Keep pendingOrders in sync with localStorage
+  useEffect(() => {
+    localStorage.setItem("pendingOrders", JSON.stringify(pendingOrders));
+  }, [pendingOrders]);
 
-
-// Keep pendingOrders in sync with localStorage
-useEffect(() => {
-  localStorage.setItem("pendingOrders", JSON.stringify(pendingOrders));
-}, [pendingOrders]);
-
-// Keep activeOrderId in sync with localStorage
-useEffect(() => {
-  if (activeOrderId !== null) {
-    localStorage.setItem("activeOrderId", JSON.stringify(activeOrderId));
-  } else {
-    localStorage.removeItem("activeOrderId");
-  }
-}, [activeOrderId]);
-
+  // Keep activeOrderId in sync with localStorage
+  useEffect(() => {
+    if (activeOrderId !== null) {
+      localStorage.setItem("activeOrderId", JSON.stringify(activeOrderId));
+    } else {
+      localStorage.removeItem("activeOrderId");
+    }
+  }, [activeOrderId]);
 
   // ➕ Create new order tab
   const addNewOrder = () => {
-  setPendingOrders((prev) => {
-    const newOrder = createNewOrder(prev);
-    setActiveOrderId(newOrder.id);
-    return [...prev, newOrder];
-  });
-};
-
+    setPendingOrders((prev) => {
+      const newOrder = createNewOrder(prev);
+      setActiveOrderId(newOrder.id);
+      return [...prev, newOrder];
+    });
+  };
 
   // ❌ Delete order
   const deleteOrder = (id: number) => {
@@ -161,34 +151,30 @@ useEffect(() => {
 
   const switchOrder = (id: number) => setActiveOrderId(id);
 
-  
   // 🔹 Cart operations
-const addToCart = (item: MenuItem) => {
-  if (!activeOrderId) {
-    setToast("⚠️ No active order. Please create one first!");
-    return;
-  }
+  const addToCart = (item: MenuItem) => {
+    if (!activeOrderId) {
+      setToast("⚠️ No active order. Please create one first!");
+      return;
+    }
 
-  setPendingOrders((prev) =>
-    prev.map((order) =>
-      order.id === activeOrderId
-        ? {
-            ...order,
-            cart: order.cart.find((c) => c.id === item.id)
-              ? order.cart.map((c) =>
-                  c.id === item.id
-                    ? { ...c, quantity: c.quantity + 1 }
-                    : c
-                )
-              : [...order.cart, { ...item, quantity: 1 }],
-          }
-        : order
-    )
-  );
+    setPendingOrders((prev) =>
+      prev.map((order) =>
+        order.id === activeOrderId
+          ? {
+              ...order,
+              cart: order.cart.find((c) => c.id === item.id)
+                ? order.cart.map((c) =>
+                    c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c
+                  )
+                : [...order.cart, { ...item, quantity: 1 }],
+            }
+          : order
+      )
+    );
 
-  setToast(`${item.name} added to cart! ✅`);
-};
-
+    setToast(`${item.name} added to cart! ✅`);
+  };
 
   const incrementQuantity = (id: number) => {
     setPendingOrders((prev) =>
@@ -283,14 +269,19 @@ const addToCart = (item: MenuItem) => {
   return (
     <>
       <div className="container">
-      {/* Left Pane + Backdrop */}
-      {isLeftOpen && (
-        <div
-          className="backdrop"
-          onClick={() => setIsLeftOpen(false)} // close on outside click
+        {/* Left Pane + Backdrop */}
+        {isLeftOpen && (
+          <div
+            className="backdrop"
+            onClick={() => setIsLeftOpen(false)} // close on outside click
+          />
+        )}
+        <LeftPane
+          isOpen={isLeftOpen}
+          setIsOpen={setIsLeftOpen}
+          role={role}
+          handleLogout={handleLogout}
         />
-      )}
-        <LeftPane isOpen={isLeftOpen} setIsOpen={setIsLeftOpen} role={role} handleLogout={handleLogout}/>
 
         <div
           className="center-right"
@@ -306,56 +297,60 @@ const addToCart = (item: MenuItem) => {
                 path="/menu/*"
                 element={<CenterPane addToCart={addToCart} />}
               />
-              <Route path="/past-orders" element={
-                <div className="centered-content">
-                  <ViewPastOrders role={role} />
-                </div>} />
+              <Route
+                path="/past-orders"
+                element={
+                  <div className="centered-content">
+                    <ViewPastOrders role={role} />
+                  </div>
+                }
+              />
               {(role === "admin" || role === "viewer") && (
                 <Route
                   path="/sales-report"
                   element={
-                  <div className="centered-content">
-                    <SalesReport cafeId={cafeId} />
-                  </div>}
+                    <div className="centered-content">
+                      <SalesReport cafeId={cafeId} />
+                    </div>
+                  }
                 />
-
-                
               )}
               <Route
                 path="/expenditure"
                 element={
-                <div className="centered-content">
-                  <Expenditure cafeId={cafeId} role={role} />
-                </div>}
+                  <div className="centered-content">
+                    <Expenditure cafeId={cafeId} role={role} />
+                  </div>
+                }
               />
-              
-              {(role === "admin" ) && (
+
+              {role === "admin" && (
                 <Route
                   path="/menu-items"
                   element={
-                  <div className="centered-content">
-                    <MenuItems cafeId={cafeId} role={role}/>
-                  </div>}
-                />                
+                    <div className="centered-content">
+                      <MenuItems cafeId={cafeId} role={role} />
+                    </div>
+                  }
+                />
               )}
-            </Routes> 
+            </Routes>
           </div>
 
           {isMenuPage && (
-          <RightPane
-            orders={pendingOrders}
-            activeOrderId={activeOrderId}
-            setActiveOrderId={setActiveOrderId}
-            switchOrder={switchOrder}
-            addNewOrder={addNewOrder}
-            incrementQuantity={incrementQuantity}
-            decrementQuantity={decrementQuantity}
-            setPaymentMode={setPaymentMode}
-            submitOrder={submitOrder}
-            deleteOrder={deleteOrder}
-          />
-        )}
-
+            <RightPane
+              orders={pendingOrders}
+              activeOrderId={activeOrderId}
+              setActiveOrderId={setActiveOrderId}
+              switchOrder={switchOrder}
+              addNewOrder={addNewOrder}
+              incrementQuantity={incrementQuantity}
+              decrementQuantity={decrementQuantity}
+              setPaymentMode={setPaymentMode}
+              submitOrder={submitOrder}
+              deleteOrder={deleteOrder}
+            />
+          )}
         </div>
       </div>
 
