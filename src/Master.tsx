@@ -39,27 +39,34 @@ export interface PendingOrder {
   isSubmitted: boolean;
 }
 
-// 🔹 Helper to create a new empty order
-const createNewOrder = (count = 1): PendingOrder => ({
-  id: Date.now(),
-  name: `Order ${count}`,
-  cart: [],
-  paymentMode: "Cash",
-  isSubmitted: false,
-});
+
+
+
 
 function Master({ cafeId, role, handleLogout }: MasterProps) {
   const location = useLocation(); // 👈 get current route
   const isMenuPage = location.pathname.startsWith("/menu");
 
+  // 🔹 Helper to create a new empty order
+  const createNewOrder = (orders: PendingOrder[]): PendingOrder => {
+  const nextNumber = getNextOrderNumber(orders);
+  return {
+    id: Date.now(),                 // still unique for keys/state
+    name: `Order ${nextNumber}`,    // only display number
+    cart: [],
+    paymentMode: "Cash",
+    isSubmitted: false,
+  };
+};
+
   // Load pending orders from localStorage or fallback to one new order
-const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>(() => {
+  const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>(() => {
   const stored = localStorage.getItem("pendingOrders");
-  return stored ? JSON.parse(stored) : [createNewOrder(1)];
+  return stored ? JSON.parse(stored) : [createNewOrder([])];
 });
 
 // Load active order from localStorage or fallback to first order
-const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
+  const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
   const storedActive = localStorage.getItem("activeOrderId");
   if (storedActive) return JSON.parse(storedActive);
 
@@ -82,6 +89,20 @@ const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
     orderId: null,
   });
 
+  // 🔹 Find the lowest missing order number for display
+
+  const getNextOrderNumber = (orders: PendingOrder[]) => {
+    if (orders.length === 0) return 1;
+
+    const existing = orders.map((o) => parseInt(o.name.replace("Order ", "")));
+    for (let i = 1; i <= existing.length; i++) {
+      if (!existing.includes(i)) return i; // fill gap
+    }
+    return Math.max(...existing) + 1; // continue
+  };
+
+
+
 // Keep pendingOrders in sync with localStorage
 useEffect(() => {
   localStorage.setItem("pendingOrders", JSON.stringify(pendingOrders));
@@ -99,10 +120,13 @@ useEffect(() => {
 
   // ➕ Create new order tab
   const addNewOrder = () => {
-    const newOrder = createNewOrder(pendingOrders.length + 1);
-    setPendingOrders((prev) => [...prev, newOrder]);
+  setPendingOrders((prev) => {
+    const newOrder = createNewOrder(prev);
     setActiveOrderId(newOrder.id);
-  };
+    return [...prev, newOrder];
+  });
+};
+
 
   // ❌ Delete order
   const deleteOrder = (id: number) => {
@@ -122,7 +146,7 @@ useEffect(() => {
         if (updatedOrders.length > 0) {
           setActiveOrderId(updatedOrders[0].id);
         } else {
-          const newOrder = createNewOrder(1);
+          const newOrder = createNewOrder([]);
           setActiveOrderId(newOrder.id);
           return [newOrder];
         }
@@ -238,7 +262,7 @@ const addToCart = (item: MenuItem) => {
       setPendingOrders((prev) => {
         const remaining = prev.filter((o) => o.id !== orderId);
         if (remaining.length === 0) {
-          const newOrder = createNewOrder(1);
+          const newOrder = createNewOrder([]);
           setActiveOrderId(newOrder.id);
           return [newOrder];
         } else {
@@ -312,13 +336,9 @@ const addToCart = (item: MenuItem) => {
                   <div className="centered-content">
                     <MenuItems cafeId={cafeId} role={role}/>
                   </div>}
-                />
-
-                
+                />                
               )}
-
-            </Routes>
-            
+            </Routes> 
           </div>
 
           {isMenuPage && (
