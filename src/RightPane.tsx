@@ -41,6 +41,7 @@ function RightPane({
             className={`tab-btn ${order.id === activeOrderId ? "active" : ""}`}
             style={{
               display: "flex",
+              cursor: "pointer",
               justifyContent: "space-between",
               alignItems: "center",
               gap: "6px",
@@ -54,8 +55,9 @@ function RightPane({
               background:
                 activeOrderId === order.id ? "#06595eff" : "#6d6777ff",
             }}
+             onClick={() => switchOrder(order.id)}
           >
-            <span onClick={() => switchOrder(order.id)} style={{ cursor: "pointer" }}>
+            <span>
               {order.name}
             </span>
 
@@ -73,8 +75,7 @@ function RightPane({
                 color: "white",
                 border: "none",
                 borderRadius: "4px",
-                padding: "0 6px",
-                cursor: "pointer",
+                padding: "2px 8px",   // ✅ more padding for larger button area
               }}
             >
               ✕
