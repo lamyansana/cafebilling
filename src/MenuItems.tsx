@@ -124,7 +124,7 @@ const MenuItems: React.FC<MenuItemsProps> = ({ cafeId }) => {
   if (loading) return <p>Loading menu...</p>
 
   return (
-    <div style={{ padding: "1rem" }}>
+    <div className="menuitem-bg">
       <h2>🍴 Menu Items</h2>
 
       {/* Add new item form */}

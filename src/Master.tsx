@@ -45,7 +45,7 @@ export interface PendingOrder {
 
 function Master({ cafeId, role, handleLogout }: MasterProps) {
   const location = useLocation(); // 👈 get current route
-  const isMenuPage = location.pathname.startsWith("/menu");
+  const isMenuPage = location.pathname.startsWith("/menu/");
 
   // 🔹 Helper to create a new empty order
   const createNewOrder = (orders: PendingOrder[]): PendingOrder => {
