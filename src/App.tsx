@@ -13,7 +13,7 @@ const App: React.FC = () => {
   const [cafeName, setCafeName] = useState("Cafe Dashboard"); // default/fallback
   const [user, setUser] = useState<any>(null);
   const [cafeId, setCafeId] = useState<number | null>(null);
-  const [role, setRole] = useState<"admin" | "staff" | "viewer" |null>(null);
+  const [role, setRole] = useState<"admin" | "staff" | "viewer" | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,30 +22,28 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   const fetchCafeName = async (id: number) => {
-  try {
-    const { data, error } = await supabase
-      .from("cafes")
-      .select("name")
-      .eq("id", id)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("cafes")
+        .select("name")
+        .eq("id", id)
+        .single();
 
-    if (data && !error) {
-      setCafeName(data.name);
-    } else {
-      console.error("Error fetching cafe name:", error);
-    }
-  } catch (err) {
-    console.error("Unexpected error fetching cafe name:", err);
-  }
-};
-
-
-    useEffect(() => {
-      if (cafeId !== null) {
-        fetchCafeName(cafeId);
+      if (data && !error) {
+        setCafeName(data.name);
+      } else {
+        console.error("Error fetching cafe name:", error);
       }
-    }, [cafeId]);
+    } catch (err) {
+      console.error("Unexpected error fetching cafe name:", err);
+    }
+  };
 
+  useEffect(() => {
+    if (cafeId !== null) {
+      fetchCafeName(cafeId);
+    }
+  }, [cafeId]);
 
   // Restore session on page load
   useEffect(() => {
@@ -136,22 +134,26 @@ const App: React.FC = () => {
   // Login form if not logged in
   if (!user) {
     return (
-      <div style={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#f0f4f8",
-      }}>
-        <div style={{
-          background: "white",
-          padding: "2rem",
-          borderRadius: "8px",
-          boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-          width: "300px",
-          textAlign: "center",
-        }}>
+      <div
+        style={{
+          height: "100vh",
+          width: "100vw",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: prefersDark ? "#1e1e1e" : "#f0f4f8",
+          color: prefersDark ? "#f5f5f5" : "#000",
+        }}
+      >
+        <div
+          style={{
+            padding: "2rem",
+            borderRadius: "8px",
+            boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+            width: "300px",
+            textAlign: "center",
+          }}
+        >
           <h2 style={{ marginBottom: "1.5rem" }}>Login</h2>
           <form onSubmit={handleLogin}>
             <input
@@ -160,7 +162,13 @@ const App: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              style={{ width: "100%", padding: "0.5rem", marginBottom: "1rem", borderRadius: "4px", border: "1px solid #ccc" }}
+              style={{
+                width: "100%",
+                padding: "0.5rem",
+                marginBottom: "1rem",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+              }}
             />
             <input
               type="password"
@@ -168,12 +176,26 @@ const App: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              style={{ width: "100%", padding: "0.5rem", marginBottom: "1.5rem", borderRadius: "4px", border: "1px solid #ccc" }}
+              style={{
+                width: "100%",
+                padding: "0.5rem",
+                marginBottom: "1.5rem",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+              }}
             />
             <button
               type="submit"
               disabled={loading}
-              style={{ width: "100%", padding: "0.75rem", backgroundColor: "#4CAF50", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                backgroundColor: "#4CAF50",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
             >
               {loading ? "Logging in..." : "Login"}
             </button>
@@ -185,34 +207,55 @@ const App: React.FC = () => {
 
   // Fetching cafeId if not loaded yet
   if (user && cafeId === null) {
-    return <div style={{ height: "100vh", width: "100vw", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "1.2rem" }}>Fetching your cafe data...</div>;
+    return (
+      <div
+        style={{
+          height: "100vh",
+          width: "100vw",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          fontSize: "1.2rem",
+        }}
+      >
+        Fetching your cafe data...
+      </div>
+    );
   }
 
   // Render Master when logged in
-  
-return (
-  <div className={prefersDark ? "dark-mode" : ""} 
-       style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw" }}>
-    
-    {/* Top text/header */}
-    <div style={{
-      backgroundColor: prefersDark ? "#1e1e1e" : "#f0f4f8",
-      color: prefersDark ? "#f5f5f5" : "#000",
-      padding: "0.5rem 1rem",
-      textAlign: "center",
-      fontWeight: "bold",
-      fontSize: "1rem"
-    }}>
-       {cafeName} Dashboard!
-    </div>
 
-    {/* Main content fills remaining space */}
-    <div style={{ flexGrow: 1, display: "flex" }}>
-      {/* LeftPane + Master layout */}
-      <Master cafeId={cafeId!} role={role!} handleLogout={handleLogout} />
+  return (
+    <div
+      className={prefersDark ? "dark-mode" : ""}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        width: "100vw",
+      }}
+    >
+      {/* Top text/header */}
+      <div
+        style={{
+          backgroundColor: prefersDark ? "#1e1e1e" : "#f0f4f8",
+          color: prefersDark ? "#f5f5f5" : "#000",
+          padding: "0.5rem 1rem",
+          textAlign: "center",
+          fontWeight: "bold",
+          fontSize: "1rem",
+        }}
+      >
+        {cafeName} Dashboard!
+      </div>
+
+      {/* Main content fills remaining space */}
+      <div style={{ flexGrow: 1, display: "flex" }}>
+        {/* LeftPane + Master layout */}
+        <Master cafeId={cafeId!} role={role!} handleLogout={handleLogout} />
+      </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default App;

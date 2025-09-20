@@ -11,6 +11,7 @@ import ConfirmModal from "./ConfirmModal";
 import Expenditure from "./Expenditure";
 import "./App.css";
 import MenuItems from "./MenuItems";
+import Analytics from "./Analytics";
 
 interface MasterProps {
   cafeId: number | null;
@@ -334,6 +335,18 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
                   }
                 />
               )}
+
+              {(role === "admin" || role === "viewer") && (
+  <Route
+    path="/analytics"
+    element={
+      <div className="centered-content">
+        <Analytics cafeId={cafeId} />
+      </div>
+    }
+  />
+)}
+
             </Routes>
           </div>
 
