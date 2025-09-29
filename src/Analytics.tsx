@@ -376,33 +376,6 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
     <div className="analytics-container">
       <h2>📊 Analytics</h2>
 
-      {/* KPIs */}
-      <div className="kpi-container">
-        <div className="kpi-card kpi-revenue">
-          <div className="kpi-icon">💰</div>
-          <div className="kpi-label">Revenue</div>
-          <div className="kpi-value">₹{totalRevenue.toLocaleString()}</div>
-        </div>
-
-        <div className="kpi-card kpi-expenses">
-          <div className="kpi-icon">💸</div>
-          <div className="kpi-label">Expenses</div>
-          <div className="kpi-value">₹{totalExpenses.toLocaleString()}</div>
-        </div>
-
-        <div className="kpi-card kpi-profit">
-          <div className="kpi-icon">📈</div>
-          <div className="kpi-label">Profit</div>
-          <div className="kpi-value">₹{totalProfit.toLocaleString()}</div>
-        </div>
-
-        <div className="kpi-card kpi-orders">
-          <div className="kpi-icon">🛒</div>
-          <div className="kpi-label">Orders</div>
-          <div className="kpi-value">{filteredOrders.length}</div>
-        </div>
-      </div>
-
       {/* Date Filter */}
       <div style={{ marginBottom: "1rem" }}>
         <label>Filter: </label>
@@ -434,6 +407,33 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
             />
           </>
         )}
+      </div>
+
+      {/* KPIs */}
+      <div className="kpi-container">
+        <div className="kpi-card kpi-revenue">
+          <div className="kpi-icon">💰</div>
+          <div className="kpi-label">Revenue</div>
+          <div className="kpi-value">₹{totalRevenue.toLocaleString()}</div>
+        </div>
+
+        <div className="kpi-card kpi-expenses">
+          <div className="kpi-icon">💸</div>
+          <div className="kpi-label">Expenses</div>
+          <div className="kpi-value">₹{totalExpenses.toLocaleString()}</div>
+        </div>
+
+        <div className="kpi-card kpi-profit">
+          <div className="kpi-icon">📈</div>
+          <div className="kpi-label">Profit</div>
+          <div className="kpi-value">₹{totalProfit.toLocaleString()}</div>
+        </div>
+
+        <div className="kpi-card kpi-orders">
+          <div className="kpi-icon">🛒</div>
+          <div className="kpi-label">Orders</div>
+          <div className="kpi-value">{filteredOrders.length}</div>
+        </div>
       </div>
 
       {/* Charts */}
