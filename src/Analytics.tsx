@@ -60,7 +60,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
     | "30days"
     | "quarter"
     | "ytd"
-  >("week");
+  >("today");
   const today = new Date().toISOString().split("T")[0];
   const [customStart, setCustomStart] = useState(today);
   const [customEnd, setCustomEnd] = useState(today);
@@ -311,6 +311,13 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
   filteredOrders.forEach((o) => {
     paymentCounts[o.payment_mode] = (paymentCounts[o.payment_mode] || 0) + 1;
   });
+
+  const paymentAmounts: { [key: string]: number } = { Cash: 0, UPI: 0 };
+  filteredOrders.forEach((o) => {
+    paymentAmounts[o.payment_mode] =
+      (paymentAmounts[o.payment_mode] || 0) + o.total_amount;
+  });
+
   const paymentModeData = {
     labels: ["Cash", "UPI"],
     datasets: [
@@ -320,6 +327,24 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
         backgroundColor: ["#36A2EB", "#FF6384"],
       },
     ],
+  };
+
+  const paymentModeOptions = {
+    responsive: true,
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function (context: any) {
+            const label = context.label; // Cash or UPI
+            const orders = paymentCounts[label];
+            const amount = paymentAmounts[label];
+            return `${label}: ${orders} orders, ₹${amount}`;
+          },
+        },
+      },
+      legend: { position: "top" as const },
+      title: { display: true, text: "Payment Mode Split" },
+    },
   };
 
   // --- Expenditure Breakdown ---
@@ -462,7 +487,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
 
       <div style={{ marginBottom: "2rem", maxWidth: "400px" }}>
         <h3>Payment Mode Split</h3>
-        <Pie data={paymentModeData} options={{ responsive: true }} />
+        <Pie data={paymentModeData} options={paymentModeOptions} />
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
@@ -59,9 +59,19 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     return () => observer.disconnect();
   }, []);
 
-  // Dark/light styles
-
   ////////////////////
+
+  const dateRef = useRef<HTMLInputElement>(null);
+  const rangeStartRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (filter === "date" && dateRef.current) {
+      dateRef.current.showPicker?.(); // 🔹 auto-open single date
+    }
+    if (filter === "range" && rangeStartRef.current) {
+      rangeStartRef.current.showPicker?.(); // 🔹 auto-open start date
+    }
+  }, [filter]);
 
   useEffect(() => {
     if (!cafeId) return; // Avoid fetching if cafeId is null
@@ -542,6 +552,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
             Date:{" "}
             <input
               type="date"
+              ref={dateRef}
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
             />
@@ -628,7 +639,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
         <p>Total Expenses: ₹{expenses.toFixed(2)}</p>
         <p>Expenses (Cash): ₹{expensesByCash.toFixed(2)}</p>
         <p>Expenses (UPI): ₹{expensesByUPI.toFixed(2)}</p>
-        <p>Net Profit: ₹{profit.toFixed(2)}</p>
+        <p>Net Bal (Total): ₹{profit.toFixed(2)}</p>
         <p>Net Bal (Cash): ₹{netProfitByCash.toFixed(2)}</p>
         <p>Net Bal (UPI): ₹{netProfitByUPI.toFixed(2)}</p>
       </div>
