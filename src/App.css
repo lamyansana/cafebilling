@@ -2,7 +2,7 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  width: 100%;
+  width: 100vw;
   box-sizing: border-box;
 }
 
@@ -11,7 +11,7 @@ html, body {
    display: flex;
   flex-direction: row;   /* horizontal on desktop */
   width: 100%;
-  max-width: 100vw;      /* never exceed viewport width */
+  max-width: 100dvw;      /* never exceed viewport width */
   overflow-x: hidden;    /* prevent horizontal scroll */
   box-sizing: border-box;
 }
@@ -371,6 +371,60 @@ html, body {
 .delete-order-btn:hover {
   color: darkred;
 }
+
+.kpi-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.kpi-card {
+  border-radius: 12px;
+  padding: 1.2rem;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.18);
+}
+
+.kpi-icon {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.kpi-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.kpi-value {
+  font-size: 1.6rem;
+  font-weight: bold;
+  margin: 0.2rem 0;
+}
+
+/* Background colors for each tile */
+.kpi-revenue {
+  background: #27ae60; /* Green */
+}
+.kpi-expenses {
+  background: #e74c3c; /* Red */
+}
+.kpi-profit {
+  background: #2980b9; /* Blue */
+}
+.kpi-orders {
+  background: #8e44ad; /* Purple */
+}
+
 
 
 

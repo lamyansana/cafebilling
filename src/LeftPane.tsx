@@ -89,20 +89,20 @@ const LeftPane: React.FC<LeftPaneProps> = ({
                 🍽️ Menu Items
               </NavLink>
             )}
-            
+
             {role === "admin" && (
-  <NavLink
-    to="/analytics"
-    className={({ isActive }) =>
-      isActive ? "active-link" : "inactive-link"
-    }
-    onClick={() => {
-      if (window.innerWidth <= 768) setIsOpen(false);
-    }}
-  >
-    📊 Analytics
-  </NavLink>
-)}
+              <NavLink
+                to="/analytics"
+                className={({ isActive }) =>
+                  isActive ? "active-link" : "inactive-link"
+                }
+                onClick={() => {
+                  if (window.innerWidth <= 768) setIsOpen(false);
+                }}
+              >
+                📊 Analytics
+              </NavLink>
+            )}
 
             <button className="disabled-btn" disabled>
               Orders (coming soon)

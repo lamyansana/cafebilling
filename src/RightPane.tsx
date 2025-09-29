@@ -27,12 +27,15 @@ function RightPane({
 }: RightPaneProps) {
   const activeOrder = orders.find((o) => o.id === activeOrderId) || null;
   const total = activeOrder
-    ? activeOrder.cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    ? activeOrder.cart.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      )
     : 0;
 
   return (
     <div className="right-pane">
-      <h2 style={{ textAlign: "center", margin: 0}}>🛒CART</h2>
+      <h2 style={{ textAlign: "center", margin: 0 }}>🛒CART</h2>
       {/* 🔹 Order Tabs */}
       <div className="order-tabs">
         {orders.map((order) => (
@@ -55,11 +58,9 @@ function RightPane({
               background:
                 activeOrderId === order.id ? "#06595eff" : "#6d6777ff",
             }}
-             onClick={() => switchOrder(order.id)}
+            onClick={() => switchOrder(order.id)}
           >
-            <span>
-              {order.name}
-            </span>
+            <span>{order.name}</span>
 
             <button
               onClick={(e) => {
@@ -67,7 +68,9 @@ function RightPane({
                 deleteOrder(order.id);
                 if (activeOrderId === order.id) {
                   const remaining = orders.filter((o) => o.id !== order.id);
-                  setActiveOrderId(remaining.length > 0 ? remaining[0].id : null);
+                  setActiveOrderId(
+                    remaining.length > 0 ? remaining[0].id : null
+                  );
                 }
               }}
               style={{
@@ -75,7 +78,7 @@ function RightPane({
                 color: "white",
                 border: "none",
                 borderRadius: "4px",
-                padding: "2px 8px",   // ✅ more padding for larger button area
+                padding: "2px 8px", // ✅ more padding for larger button area
               }}
             >
               ✕
@@ -104,12 +107,15 @@ function RightPane({
                       <span className="item-price">₹{item.price}</span>
                     </div>
                     <div className="cart-controls">
-                      <button onClick={() => decrementQuantity(item.id)}>-</button>
+                      <button onClick={() => decrementQuantity(item.id)}>
+                        -
+                      </button>
                       <span>{item.quantity}</span>
-                      <button onClick={() => incrementQuantity(item.id)}>+</button>
+                      <button onClick={() => incrementQuantity(item.id)}>
+                        +
+                      </button>
                     </div>
                   </li>
-
                 ))}
               </ul>
               <h3>Total: ₹{total}</h3>
@@ -118,28 +124,40 @@ function RightPane({
               <div className="payment-modes">
                 <h4>Select Payment Mode:</h4>
                 <div className="payment-modes-row">
-    <label className={`payment-option ${activeOrder.paymentMode === "Cash" ? "active" : ""}`}>
-      <input
-        type="radio"
-        name={`payment-${activeOrder.id}`}
-        value="Cash"
-        checked={activeOrder.paymentMode === "Cash"}
-        onChange={(e) => setPaymentMode(e.target.value as "Cash" | "UPI")}
-      />
-      <span>Cash</span>
-    </label>
+                  <label
+                    className={`payment-option ${
+                      activeOrder.paymentMode === "Cash" ? "active" : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`payment-${activeOrder.id}`}
+                      value="Cash"
+                      checked={activeOrder.paymentMode === "Cash"}
+                      onChange={(e) =>
+                        setPaymentMode(e.target.value as "Cash" | "UPI")
+                      }
+                    />
+                    <span>Cash</span>
+                  </label>
 
-    <label className={`payment-option ${activeOrder.paymentMode === "UPI" ? "active" : ""}`}>
-      <input
-        type="radio"
-        name={`payment-${activeOrder.id}`}
-        value="UPI"
-        checked={activeOrder.paymentMode === "UPI"}
-        onChange={(e) => setPaymentMode(e.target.value as "Cash" | "UPI")}
-      />
-      <span>UPI</span>
-    </label>
-  </div>
+                  <label
+                    className={`payment-option ${
+                      activeOrder.paymentMode === "UPI" ? "active" : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`payment-${activeOrder.id}`}
+                      value="UPI"
+                      checked={activeOrder.paymentMode === "UPI"}
+                      onChange={(e) =>
+                        setPaymentMode(e.target.value as "Cash" | "UPI")
+                      }
+                    />
+                    <span>UPI</span>
+                  </label>
+                </div>
               </div>
 
               {!activeOrder.isSubmitted && (

@@ -337,16 +337,15 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
               )}
 
               {(role === "admin" || role === "viewer") && (
-  <Route
-    path="/analytics"
-    element={
-      <div className="centered-content">
-        <Analytics cafeId={cafeId} />
-      </div>
-    }
-  />
-)}
-
+                <Route
+                  path="/analytics"
+                  element={
+                    <div className="centered-content">
+                      <Analytics cafeId={cafeId} />
+                    </div>
+                  }
+                />
+              )}
             </Routes>
           </div>
 

@@ -1,5 +1,3 @@
-
-
 interface ConfirmModalProps {
   isOpen: boolean;
   message: string;
@@ -7,7 +5,12 @@ interface ConfirmModalProps {
   onCancel: () => void;
 }
 
-function ConfirmModal({ isOpen, message, onConfirm, onCancel }: ConfirmModalProps) {
+function ConfirmModal({
+  isOpen,
+  message,
+  onConfirm,
+  onCancel,
+}: ConfirmModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -27,7 +30,8 @@ function ConfirmModal({ isOpen, message, onConfirm, onCancel }: ConfirmModalProp
     >
       <div
         style={{
-          background: "#fff",
+          background: "#3f3f3fff",
+          color: "#eeeeeeff",
           padding: "20px",
           borderRadius: "12px",
           width: "300px",
@@ -35,13 +39,16 @@ function ConfirmModal({ isOpen, message, onConfirm, onCancel }: ConfirmModalProp
           boxShadow: "0px 4px 15px rgba(0,0,0,0.3)",
         }}
       >
-        <p style={{ marginBottom: "20px", fontSize: "16px", fontWeight: 500 }}>{message}</p>
+        <p style={{ marginBottom: "20px", fontSize: "16px", fontWeight: 500 }}>
+          {message}
+        </p>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <button
             onClick={onCancel}
             style={{
               padding: "8px 16px",
-              background: "#ccc",
+              background: "#2c633aff",
+              color: "#eeeeeeff",
               border: "none",
               borderRadius: "6px",
               cursor: "pointer",
