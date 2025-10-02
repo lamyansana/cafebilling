@@ -195,7 +195,7 @@ function RightPane({
                       <label>Cash: </label>
                       <input
                         type="number"
-                        value={cashAmount}
+                        value={cashAmount !== 0 ? cashAmount : ""}
                         min={0}
                         max={total}
                         onChange={(e) =>
@@ -207,7 +207,7 @@ function RightPane({
                       <label>UPI: </label>
                       <input
                         type="number"
-                        value={upiAmount}
+                        value={upiAmount !== 0 ? upiAmount : ""}
                         min={0}
                         max={total}
                         onChange={(e) =>
