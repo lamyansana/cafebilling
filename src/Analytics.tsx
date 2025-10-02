@@ -52,6 +52,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
   const [expenditures, setExpenditures] = useState<Expenditure[]>([]);
   const [filter, setFilter] = useState<
     | "today"
+    | "yesterday"
     | "week"
     | "month"
     | "year"
@@ -128,6 +129,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
     switch (filter) {
       case "today":
         return d.toDateString() === now.toDateString();
+      case "yesterday": {
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        return d.toDateString() === yesterday.toDateString();
+      }
       case "week":
         return d >= startOfWeek && d <= now;
       case "month":
@@ -167,6 +173,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
     0
   );
   const totalProfit = totalRevenue - totalExpenses;
+
+  const expensePercent =
+    totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0;
+  const profitPercent =
+    totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
   // --- Daily Trend (Revenue, Expenses, Profit) ---
   const dateMap = new Map<string, { revenue: number; expenses: number }>();
@@ -384,6 +395,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
           onChange={(e) => setFilter(e.target.value as any)}
         >
           <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
           <option value="week">This Week</option>
           <option value="month">This Month</option>
           <option value="year">This Year</option>
@@ -420,13 +432,33 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
         <div className="kpi-card kpi-expenses">
           <div className="kpi-icon">💸</div>
           <div className="kpi-label">Expenses</div>
-          <div className="kpi-value">₹{totalExpenses.toLocaleString()}</div>
+          <div
+            className="kpi-value"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span>₹{totalExpenses.toLocaleString()}</span>
+            <span>({expensePercent.toFixed(1)}%)</span>
+          </div>
         </div>
 
         <div className="kpi-card kpi-profit">
           <div className="kpi-icon">📈</div>
           <div className="kpi-label">Profit</div>
-          <div className="kpi-value">₹{totalProfit.toLocaleString()}</div>
+          <div
+            className="kpi-value"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span>₹{totalProfit.toLocaleString()}</span>
+            <span>({profitPercent.toFixed(1)}%)</span>
+          </div>
         </div>
 
         <div className="kpi-card kpi-orders">

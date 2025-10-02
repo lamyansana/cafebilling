@@ -18,12 +18,17 @@ interface Expense {
   payment_mode: "Cash" | "UPI";
 }
 
+// Utility: always return YYYY-MM-DD in local timezone
+const getLocalDate = (d: Date = new Date()) =>
+  new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    .toISOString()
+    .split("T")[0];
+
 const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [selectedDate, setSelectedDate] = useState(getLocalDate()); // ✅ local date
+
   const [filter, setFilter] = useState<"day" | "week" | "month" | "year">(
     "day"
   );
@@ -33,7 +38,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
     rate: "",
     quantity: "1",
     amount: "",
-    date: new Date().toISOString().split("T")[0],
+    date: getLocalDate(),
     payment_mode: "Cash",
   });
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -120,7 +125,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
       rate: "",
       quantity: "1",
       amount: "",
-      date: new Date().toISOString().split("T")[0],
+      date: getLocalDate(),
       payment_mode: "Cash",
     });
   };
@@ -177,7 +182,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
       item: form.item,
       rate,
       quantity: qty,
-      date: form.date,
+      date: getLocalDate(new Date(form.date)),
       payment_mode: form.payment_mode,
       cafe_id: cafeId,
     };
@@ -332,9 +337,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
             boxSizing: "border-box",
           }}
         />
-        <div>
-         Amount: ₹{form.amount}
-        </div>
+        <div>Amount: ₹{form.amount}</div>
 
         <input
           type="date"

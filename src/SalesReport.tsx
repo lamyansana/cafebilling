@@ -31,7 +31,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenditures, setExpenditures] = useState<Expenditure[]>([]);
   const [filter, setFilter] = useState<
-    "today" | "week" | "month" | "year" | "date" | "range"
+    "today" | "yesterday" | "week" | "month" | "year" | "date" | "range"
   >("today");
   const today = new Date().toISOString().split("T")[0];
   const [customStart, setCustomStart] = useState(today);
@@ -140,6 +140,11 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     switch (filter) {
       case "today":
         return d.toDateString() === now.toDateString();
+      case "yesterday": {
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        return d.toDateString() === yesterday.toDateString();
+      }
       case "week": {
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
@@ -319,6 +324,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
 
     addHeader();
 
+    let fileDatePart = "";
     // --- Date Text ---
     checkPageBreak(30);
     let dateText = "Date: ";
@@ -328,6 +334,10 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       dateText += start === end ? start : `${start} to ${end}`;
     } else if (filter === "today") {
       dateText += formatDate(customStart || new Date());
+    } else if (filter === "yesterday") {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      fileDatePart = formatDate(yesterday).replace(/ /g, "-");
     } else if (filter === "week") {
       const now = new Date();
       const startOfWeek = new Date(now);
@@ -487,7 +497,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     doc.putTotalPages(totalPagesExp);
 
     // --- Dynamic filename ---
-    let fileDatePart = "";
+
     if (filter === "range" && customStart && customEnd) {
       const start = formatDate(customStart).replace(/ /g, "-");
       const end = formatDate(customEnd).replace(/ /g, "-");
@@ -540,6 +550,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
           }}
         >
           <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
           <option value="week">This Week</option>
           <option value="month">This Month</option>
           <option value="year">This Year</option>

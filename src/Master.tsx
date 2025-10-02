@@ -35,7 +35,9 @@ export interface PendingOrder {
   id: number;
   name: string;
   cart: CartItem[];
-  paymentMode: "Cash" | "UPI";
+  paymentMode: "Cash" | "UPI" | "Cash&UPI"; // include split option
+  cashAmount?: number; // for split payment
+  upiAmount?: number; // for split payment
   isSubmitted: boolean;
 }
 
@@ -47,10 +49,12 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
   const createNewOrder = (orders: PendingOrder[]): PendingOrder => {
     const nextNumber = getNextOrderNumber(orders);
     return {
-      id: Date.now(), // still unique for keys/state
-      name: `Order ${nextNumber}`, // only display number
+      id: Date.now(),
+      name: `Order ${nextNumber}`,
       cart: [],
-      paymentMode: "Cash",
+      paymentMode: "Cash", // default single payment
+      cashAmount: 0, // for split payment
+      upiAmount: 0, // for split payment
       isSubmitted: false,
     };
   };
@@ -209,7 +213,7 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
     );
   };
 
-  const setPaymentMode = (mode: "Cash" | "UPI") => {
+  const setPaymentMode = (mode: "Cash" | "UPI" | "Cash&UPI") => {
     setPendingOrders((prev) =>
       prev.map((order) =>
         order.id === activeOrderId ? { ...order, paymentMode: mode } : order
@@ -237,15 +241,78 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
         price: ci.price,
       }));
 
-      const { error } = await supabase.rpc("insert_order_with_items", {
-        cafe: cafeId,
-        items: itemsArray,
-        payment_mode: order.paymentMode,
-        total_amount: total,
-      });
+      if (order.paymentMode === "Cash&UPI") {
+        const cashAmount = order.cashAmount ?? 0;
+        const upiAmount = order.upiAmount ?? 0;
 
-      if (error) throw error;
+        if (cashAmount <= 0 || upiAmount <= 0) {
+          setToast("Both Cash and UPI amounts must be greater than 0 ❌");
+          return;
+        }
 
+        if (cashAmount + upiAmount !== total) {
+          setToast("Cash + UPI must equal total amount ❌");
+          return;
+        }
+
+        // Determine which is larger
+        const primaryPaymentMode = cashAmount >= upiAmount ? "Cash" : "UPI";
+        const secondaryPaymentMode = cashAmount >= upiAmount ? "UPI" : "Cash";
+        const primaryAmount = Math.max(cashAmount, upiAmount);
+        const secondaryAmount = Math.min(cashAmount, upiAmount);
+
+        // Submit primary payment with all items
+        const { error: primaryError } = await supabase.rpc(
+          "insert_order_with_items",
+          {
+            cafe: cafeId,
+            items: itemsArray,
+            payment_mode: primaryPaymentMode,
+            total_amount: primaryAmount,
+          }
+        );
+        if (primaryError) throw primaryError;
+
+        // Submit secondary payment as **single item** with parent order number + mode
+        const secondaryItem = [
+          {
+            menu_item_id: null,
+            item_name: `${order.name}_${secondaryPaymentMode.toLowerCase()}`,
+            quantity: 1,
+            price: secondaryAmount,
+          },
+        ];
+
+        const { error: secondaryError } = await supabase.rpc(
+          "insert_order_with_items",
+          {
+            cafe: cafeId,
+            items: secondaryItem,
+            payment_mode: secondaryPaymentMode,
+            total_amount: secondaryAmount,
+          }
+        );
+        if (secondaryError) throw secondaryError;
+
+        setToast(
+          `Order submitted successfully split: ${primaryPaymentMode} ₹${primaryAmount}, ${secondaryPaymentMode} ₹${secondaryAmount}! ✅`
+        );
+      } else {
+        // Normal single payment
+        const { error } = await supabase.rpc("insert_order_with_items", {
+          cafe: cafeId,
+          items: itemsArray,
+          payment_mode: order.paymentMode,
+          total_amount: total,
+        });
+        if (error) throw error;
+
+        setToast(
+          `Order submitted successfully with ${order.paymentMode} payment! ✅`
+        );
+      }
+
+      // Remove submitted order and reset active order
       setPendingOrders((prev) => {
         const remaining = prev.filter((o) => o.id !== orderId);
         if (remaining.length === 0) {
@@ -257,10 +324,6 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
           return remaining;
         }
       });
-
-      setToast(
-        `Order submitted successfully with ${order.paymentMode} payment! ✅`
-      );
     } catch (err) {
       console.error("Transaction failed:", err);
       setToast("Failed to submit order ❌");

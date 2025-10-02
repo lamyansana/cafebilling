@@ -23,7 +23,7 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
   const today = new Date().toISOString().split("T")[0]; // yyyy-mm-dd format for <input type="date">
   const isAdmin = role === "admin";
   const [filter, setFilter] = useState<
-    "today" | "week" | "month" | "year" | "date" | "range"
+    "today" | "yesterday" | "week" | "month" | "year" | "date" | "range"
   >("today");
   const [customStart, setCustomStart] = useState(today);
   const [customEnd, setCustomEnd] = useState(today);
@@ -108,6 +108,11 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
       switch (filter) {
         case "today":
           return orderDate.toDateString() === now.toDateString();
+        case "yesterday": {
+          const yesterday = new Date();
+          yesterday.setDate(now.getDate() - 1);
+          return orderDate.toDateString() === yesterday.toDateString();
+        }
         case "week": {
           const startOfWeek = new Date(now);
           startOfWeek.setDate(now.getDate() - now.getDay());
@@ -259,6 +264,7 @@ const ViewPastOrders: React.FC<OrdersProps> = ({ role }) => {
             onChange={(e) => setFilter(e.target.value as any)}
           >
             <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
             <option value="week">This Week</option>
             <option value="month">This Month</option>
             <option value="year">This Year</option>

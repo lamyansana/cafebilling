@@ -1,4 +1,5 @@
-import type { PendingOrder } from "./Master";
+import React, { useState, useEffect } from "react";
+import type { PendingOrder, CartItem } from "./Master";
 
 interface RightPaneProps {
   orders: PendingOrder[];
@@ -6,7 +7,7 @@ interface RightPaneProps {
   addNewOrder: () => void;
   incrementQuantity: (id: number) => void;
   decrementQuantity: (id: number) => void;
-  setPaymentMode: (mode: "Cash" | "UPI") => void; // ✅ strict type
+  setPaymentMode: (mode: "Cash" | "UPI" | "Cash&UPI") => void;
   submitOrder: (id: number) => void;
   deleteOrder: (id: number) => void;
   activeOrderId: number | null;
@@ -33,10 +34,48 @@ function RightPane({
       )
     : 0;
 
+  // Local state for split payment amounts
+  const [cashAmount, setCashAmount] = useState<number>(0);
+  const [upiAmount, setUpiAmount] = useState<number>(total);
+
+  // Update split inputs when active order changes
+  useEffect(() => {
+    if (!activeOrder) return;
+
+    if (activeOrder.paymentMode === "Cash&UPI") {
+      setCashAmount(activeOrder.cashAmount ?? 0);
+      setUpiAmount(total - (activeOrder.cashAmount ?? 0));
+    } else {
+      setCashAmount(0);
+      setUpiAmount(total); // full total for non-split payment
+    }
+  }, [activeOrder, total]);
+
+  // Sync inputs to order
+  useEffect(() => {
+    if (!activeOrder) return;
+    activeOrder.cashAmount = cashAmount;
+    activeOrder.upiAmount = upiAmount;
+  }, [cashAmount, upiAmount, activeOrder]);
+
+  // Auto-calculate the other field
+  const handleCashChange = (val: number) => {
+    const clamped = Math.min(Math.max(val, 0), total);
+    setCashAmount(clamped);
+    setUpiAmount(total - clamped);
+  };
+
+  const handleUpiChange = (val: number) => {
+    const clamped = Math.min(Math.max(val, 0), total);
+    setUpiAmount(clamped);
+    setCashAmount(total - clamped);
+  };
+
   return (
     <div className="right-pane">
       <h2 style={{ textAlign: "center", margin: 0 }}>🛒CART</h2>
-      {/* 🔹 Order Tabs */}
+
+      {/* Order Tabs */}
       <div className="order-tabs">
         {orders.map((order) => (
           <div
@@ -61,7 +100,6 @@ function RightPane({
             onClick={() => switchOrder(order.id)}
           >
             <span>{order.name}</span>
-
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -78,7 +116,7 @@ function RightPane({
                 color: "white",
                 border: "none",
                 borderRadius: "4px",
-                padding: "2px 8px", // ✅ more padding for larger button area
+                padding: "2px 8px",
               }}
             >
               ✕
@@ -90,17 +128,16 @@ function RightPane({
         </button>
       </div>
 
-      {/* 🔹 Active Order Content */}
+      {/* Active Order */}
       {activeOrder ? (
         <>
           <h3>{activeOrder.name}</h3>
-
           {activeOrder.cart.length === 0 ? (
             <p>No items yet</p>
           ) : (
             <>
               <ul>
-                {activeOrder.cart.map((item) => (
+                {activeOrder.cart.map((item: CartItem) => (
                   <li key={item.id} className="cart-item">
                     <div className="item-info">
                       <span className="item-name">{item.name}</span>
@@ -120,44 +157,66 @@ function RightPane({
               </ul>
               <h3>Total: ₹{total}</h3>
 
-              {/* 🔹 Payment Mode Selection */}
+              {/* Payment Mode */}
               <div className="payment-modes">
                 <h4>Select Payment Mode:</h4>
-                <div className="payment-modes-row">
-                  <label
-                    className={`payment-option ${
-                      activeOrder.paymentMode === "Cash" ? "active" : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`payment-${activeOrder.id}`}
-                      value="Cash"
-                      checked={activeOrder.paymentMode === "Cash"}
-                      onChange={(e) =>
-                        setPaymentMode(e.target.value as "Cash" | "UPI")
-                      }
-                    />
-                    <span>Cash</span>
-                  </label>
-
-                  <label
-                    className={`payment-option ${
-                      activeOrder.paymentMode === "UPI" ? "active" : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`payment-${activeOrder.id}`}
-                      value="UPI"
-                      checked={activeOrder.paymentMode === "UPI"}
-                      onChange={(e) =>
-                        setPaymentMode(e.target.value as "Cash" | "UPI")
-                      }
-                    />
-                    <span>UPI</span>
-                  </label>
+                <div
+                  className="payment-modes-row"
+                  style={{ display: "flex", gap: "10px", alignItems: "center" }}
+                >
+                  {["Cash", "UPI", "Cash&UPI"].map((mode) => (
+                    <label
+                      key={mode}
+                      className={`payment-option ${
+                        activeOrder.paymentMode === mode ? "active" : ""
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`payment-${activeOrder.id}`}
+                        value={mode}
+                        checked={activeOrder.paymentMode === mode}
+                        onChange={() =>
+                          setPaymentMode(mode as "Cash" | "UPI" | "Cash&UPI")
+                        }
+                      />
+                      <span>{mode}</span>
+                    </label>
+                  ))}
                 </div>
+
+                {/* Split Payment Inputs */}
+                {activeOrder.paymentMode === "Cash&UPI" && (
+                  <div
+                    className="split-payment-inputs"
+                    style={{ display: "flex", gap: "10px", marginTop: "10px" }}
+                  >
+                    <div>
+                      <label>Cash: </label>
+                      <input
+                        type="number"
+                        value={cashAmount}
+                        min={0}
+                        max={total}
+                        onChange={(e) =>
+                          handleCashChange(Number(e.target.value))
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label>UPI: </label>
+                      <input
+                        type="number"
+                        value={upiAmount}
+                        min={0}
+                        max={total}
+                        onChange={(e) =>
+                          handleUpiChange(Number(e.target.value))
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {!activeOrder.isSubmitted && (
