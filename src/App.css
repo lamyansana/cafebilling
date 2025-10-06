@@ -826,31 +826,29 @@ body {
     font-weight: bold;
   }
 
-   {
-    .centered-content > *,
-    .expenditure-page,
-    .expenditure-page > *,
-    .sales-report,
-    .sales-report > *,
-    .dashboard-page,
-    .other-page-wrapper {
-      background-color: #1e1e1e !important;
-      color: #f5f5f5 !important;
-    }
+  .centered-content > *,
+  .expenditure-page,
+  .expenditure-page > *,
+  .sales-report,
+  .sales-report > *,
+  .dashboard-page,
+  .other-page-wrapper {
+    background-color: #1e1e1e !important;
+    color: #f5f5f5 !important;
+  }
 
-    /* Titles and headings inside these pages */
-    .centered-content h2, .centered-content h3, .centered-content h4,
+  /* Titles and headings inside these pages */
+  .centered-content h2, .centered-content h3, .centered-content h4,
 .expenditure-page h2, .expenditure-page h3, .expenditure-page h4,
 .sales-report h2, .sales-report h3, .sales-report h4,  /* add sales report headings */
 .dashboard-page h2, .dashboard-page h3, .dashboard-page h4 {
-      color: #f5f5f5 !important;
-    }
+    color: #f5f5f5 !important;
+  }
 
-    .centered-content p, .centered-content span,
+  .centered-content p, .centered-content span,
 .expenditure-page p, .expenditure-page span,
 .sales-report p, .sales-report span,  /* add sales report text */
 .dashboard-page p, .dashboard-page span {
-      color: #eee !important;
-    }
+    color: #eee !important;
   }
 }

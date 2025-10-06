@@ -1,0 +1,290 @@
+/* Theme Variables */
+:root {
+  --bg-color: #ffffff;
+  --text-color: #000000;
+  --input-bg: #f0f0f0;
+  --input-border: #ccc;
+  --form-bg: #f9f9f9;
+  --button-bg: #007e4eff;
+  --button-text: #fff;
+  --button-hover: #006b3c;
+  --payment-active-bg: #007bff;
+  --payment-active-text: #fff;
+  --toast-bg: #333;
+  --toast-text: #fff;
+  --table-header-bg: #f5f5f5;
+  --table-border: #ccc;
+  --modal-bg: rgba(0, 0, 0, 0.5);
+  --modal-content-bg: #fff;
+}
+
+/* Dark mode override */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #161515;
+    --text-color: #f0f0f0;
+    --input-bg: #1e1e1e;
+    --input-border: #555;
+    --form-bg: #1c1c1c;
+    --button-bg: #0d6efd;
+    --button-text: #fff;
+    --button-hover: #0056b3;
+    --payment-active-bg: #0d6efd;
+    --payment-active-text: #fff;
+    --toast-bg: #f0f0f0;
+    --toast-text: #161515;
+    --table-header-bg: #333;
+    --table-border: #555;
+    --modal-bg: rgba(0, 0, 0, 0.7);
+    --modal-content-bg: #2c2c2c;
+  }
+}
+
+/* General background */
+.exp-bg {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  color: var(--text-color);
+  background: var(--bg-color);
+}
+
+/* Filter buttons */
+.filter-buttons {
+  margin-top: 10px;
+}
+.filter-buttons button {
+  margin-right: 5px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  padding: 8px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.filter-buttons button:hover {
+  opacity: 0.9;
+}
+
+/* Form */
+.exp-form {
+  display: grid;
+  gap: 15px;
+  max-width: 500px;
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--form-bg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Inputs */
+.exp-input {
+  padding: 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--input-bg);
+  color: var(--text-color);
+}
+.exp-input[readonly] {
+  background: var(--input-bg);
+}
+
+/* Highlight custom category input */
+.custom-highlight {
+  background: #fff8e1;
+}
+
+/* Item search dropdown */
+.item-wrapper {
+  position: relative;
+}
+.item-suggestions {
+  position: absolute;
+  top: 100%; /* below input */
+  left: 0;
+  right: 0;
+  background: var(--form-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 100;
+  padding: 0;
+  margin: 0;
+  list-style: none; /* remove bullets */
+}
+.item-suggestions li {
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--text-color);
+}
+.item-suggestions li:hover,
+.item-suggestions li.highlighted {
+  background: var(--payment-active-bg);
+  color: var(--payment-active-text);
+}
+.custom-item-option {
+  font-weight: bold;
+  background: #fff8e1;
+}
+
+/* Payment mode container (center only this) */
+.payment-container {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.payment-label {
+  padding: 8px 15px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: normal;
+  transition: all 0.2s ease;
+  color: var(--text-color);
+  background: var(--form-bg);
+  flex: 1; /* equal width */
+  text-align: center;
+}
+.payment-label.active {
+  background: var(--payment-active-bg);
+  color: var(--payment-active-text);
+  font-weight: bold;
+}
+
+/* Hide radio inputs */
+.hidden-radio {
+  display: none;
+}
+
+/* Submit & cancel button container (center only this div) */
+.submit-btn-container {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+/* Submit button stretched */
+.submit-btn {
+  width: 100%;
+  padding: 10px 15px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+/* Cancel button stays inline */
+.exp-form button.cancel-btn {
+  width: auto;
+  background: #dc3545;
+  color: #fff;
+}
+
+/* Expenditure table */
+.exp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  color: var(--text-color);
+}
+.exp-table th,
+.exp-table td {
+  padding: 8px;
+  text-align: left;
+  border: 1px solid var(--table-border);
+}
+.exp-table th {
+  background: var(--table-header-bg);
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 10px;
+  background: var(--toast-bg);
+  color: var(--toast-text);
+  border-radius: 5px;
+}
+
+/* Delete modal */
+.delete-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--modal-bg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.delete-modal-content {
+  background: var(--modal-content-bg);
+  padding: 20px;
+  border-radius: 8px;
+  min-width: 300px;
+  color: var(--text-color);
+}
+.delete-modal-content button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.delete-modal-content button + button {
+  margin-left: 10px;
+}
+
+/* Custom Item Option */
+.custom-item-option {
+  font-weight: bold;
+  background: #fff8e1; /* light yellow background for visibility */
+  color: #000; /* dark text for contrast */
+}
+
+/* Dark mode for custom item option */
+@media (prefers-color-scheme: dark) {
+  .custom-item-option {
+    background: #3a3a2c; /* dark yellowish/brown for visibility */
+    color: #fff; /* light text */
+  }
+}
+
+/* Submit button green for both light and dark modes */
+.exp-form button[type="submit"] {
+  width: 100%;
+  padding: 10px 15px;
+  background: #28a745; /* green */
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.exp-form button[type="submit"]:hover {
+  opacity: 0.9;
+}
+.category-select {
+  padding: 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--input-bg);
+  color: var(--text-color);
+  cursor: pointer;
+}
+.item-suggestions li.highlighted {
+  background: var(--payment-active-bg);
+  color: var(--payment-active-text);
+}

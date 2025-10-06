@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 import { formatDate } from "./formatDate";
-
+import "./css/expenditure.css";
 interface ExpenditureProps {
   cafeId: number | null;
   role?: "admin" | "staff" | "viewer";
@@ -18,6 +18,12 @@ interface Expense {
   payment_mode: "Cash" | "UPI";
 }
 
+interface Item {
+  id: number;
+  name: string;
+  category: string;
+}
+
 // Utility: always return YYYY-MM-DD in local timezone
 const getLocalDate = (d: Date = new Date()) =>
   new Date(d.getTime() - d.getTimezoneOffset() * 60000)
@@ -27,8 +33,9 @@ const getLocalDate = (d: Date = new Date()) =>
 const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
-  const [selectedDate, setSelectedDate] = useState(getLocalDate()); // ✅ local date
-
+  const [items, setItems] = useState<Item[]>([]);
+  const [search, setSearch] = useState("");
+  const [selectedDate, setSelectedDate] = useState(getLocalDate());
   const [filter, setFilter] = useState<"day" | "week" | "month" | "year">(
     "day"
   );
@@ -44,6 +51,10 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const itemInputRef = useRef<HTMLDivElement>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
 
   const isAdmin = role === "admin";
 
@@ -68,6 +79,17 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
     };
     fetchExpenses();
   }, [cafeId]);
+
+  // Fetch items list
+  useEffect(() => {
+    const fetchItems = async () => {
+      const { data, error } = await supabase
+        .from("expenditure_items")
+        .select("*");
+      if (!error && data) setItems(data as Item[]);
+    };
+    fetchItems();
+  }, []);
 
   // Filter logic
   useEffect(() => {
@@ -99,12 +121,38 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
     setFilteredExpenses(filtered);
   }, [expenses, selectedDate, filter]);
 
+  useEffect(() => {
+    const fetchItems = async () => {
+      const { data, error } = await supabase
+        .from("expenditure_items")
+        .select("*");
+      if (!error && data) {
+        setItems(data as Item[]);
+        const uniqueCategories = Array.from(
+          new Set(data.map((i) => i.category))
+        );
+        setCategories(uniqueCategories);
+      }
+    };
+    fetchItems();
+  }, []);
+
   // Form change
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     let updated = { ...form, [name]: value };
+
+    if (name === "item") {
+      const matched = items.find(
+        (i) => i.name.toLowerCase() === value.toLowerCase()
+      );
+      if (matched) {
+        updated.category = matched.category; // auto-fill category
+      }
+    }
+
     if (name === "rate" || name === "quantity") {
       const rate = parseFloat(name === "rate" ? value : updated.rate || "0");
       const qty = parseFloat(
@@ -113,6 +161,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
       updated.amount =
         !isNaN(rate) && !isNaN(qty) ? (rate * qty).toFixed(2) : "";
     }
+
     setForm(updated);
   };
 
@@ -128,6 +177,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
       date: getLocalDate(),
       payment_mode: "Cash",
     });
+    setSearch("");
   };
 
   // Edit
@@ -143,6 +193,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
       date: exp.date,
       payment_mode: exp.payment_mode,
     });
+    setSearch(exp.item);
   };
 
   // Delete with modal
@@ -231,80 +282,150 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
     .filter((exp) => exp.payment_mode === "UPI")
     .reduce((sum, exp) => sum + exp.amount, 0);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        itemInputRef.current &&
+        !itemInputRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+  // Filtered items for search suggestions
+  const suggestedItems = items.filter((i) =>
+    i.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="exp-bg">
       <h2>💰 Expenditure</h2>
 
-      {/* Date & Filter */}
-      <div style={{ marginBottom: "20px" }}>
-        <label>Select Date: </label>
+      {/* Add/Edit Form */}
+      <form onSubmit={handleSubmit} className="exp-form">
+        {/* Date Input */}
         <input
           type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
+          name="date"
+          value={form.date}
+          onChange={handleChange}
+          required
+          className="exp-input"
         />
-        <div style={{ marginTop: "10px" }}>
-          <button onClick={() => setFilter("day")}>Today</button>
-          <button onClick={() => setFilter("week")}>This Week</button>
-          <button onClick={() => setFilter("month")}>This Month</button>
-          <button onClick={() => setFilter("year")}>This Year</button>
-        </div>
-      </div>
 
-      {/* Add/Edit Form */}
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: "grid",
-          gap: "15px",
-          maxWidth: "500px",
-          marginBottom: "20px",
-          padding: "20px",
-          border: "1px solid #ddd",
-          borderRadius: "8px",
-          background: "#161515ff",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-        }}
-      >
+        {/* Item Search with Suggestions */}
+        <div className="item-wrapper" ref={itemInputRef}>
+          <input
+            type="text"
+            name="item"
+            placeholder="Search or select item"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              handleChange(e);
+              setShowDropdown(true);
+              setHighlightedIndex(-1);
+            }}
+            onFocus={() => setShowDropdown(true)}
+            onKeyDown={(e) => {
+              if (!showDropdown) return;
+
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setHighlightedIndex((prev) =>
+                  prev < suggestedItems.length - 1 ? prev + 1 : prev
+                );
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+                if (
+                  highlightedIndex >= 0 &&
+                  highlightedIndex < suggestedItems.length
+                ) {
+                  const selected = suggestedItems[highlightedIndex];
+                  setSearch(selected.name);
+                  setForm((prev) => ({
+                    ...prev,
+                    item: selected.name,
+                    category: selected.category,
+                  }));
+                  setShowDropdown(false);
+                } else if (suggestedItems.length === 0) {
+                  // handle custom item
+                  setForm((prev) => ({ ...prev, item: search, category: "" }));
+                  setShowDropdown(false);
+                }
+              } else if (e.key === "Escape") {
+                setShowDropdown(false);
+              }
+            }}
+            className="exp-input search-input"
+          />
+
+          {showDropdown && search && (
+            <ul className="item-suggestions">
+              {suggestedItems.length > 0 ? (
+                suggestedItems.map((i, idx) => (
+                  <li
+                    key={i.id}
+                    className={idx === highlightedIndex ? "highlighted" : ""}
+                    onMouseEnter={() => setHighlightedIndex(idx)}
+                    onClick={() => {
+                      setSearch(i.name);
+                      setForm((prev) => ({
+                        ...prev,
+                        item: i.name,
+                        category: i.category,
+                      }));
+                      setShowDropdown(false);
+                    }}
+                  >
+                    {i.name}
+                  </li>
+                ))
+              ) : (
+                <li
+                  className="custom-item-option"
+                  onClick={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      item: search,
+                      category: "",
+                    }));
+                    setShowDropdown(false);
+                  }}
+                >
+                  + Add Custom Item
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+
+        {/* Category selection */}
         <select
           name="category"
           value={form.category}
           onChange={handleChange}
           required
-          style={{
-            padding: "10px",
-            border: "1px solid #ccc",
-            borderRadius: "6px",
-            fontSize: "14px",
-            width: "100%",
-            boxSizing: "border-box",
-          }}
+          className="category-select"
         >
-          <option value="">Select Category</option>
-          <option value="Veg">Veg</option>
-          <option value="Meat">Meat</option>
-          <option value="Grocery">Grocery</option>
-          <option value="Coffee">Coffee</option>
-          <option value="Rent">Rent</option>
-          <option value="Utilities">Utilities</option>
-          <option value="Misc">Misc</option>
+          <option value="" disabled>
+            Select Category
+          </option>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
+          ))}
         </select>
-        <input
-          type="text"
-          name="item"
-          placeholder="Item"
-          value={form.item}
-          onChange={handleChange}
-          required
-          style={{
-            padding: "10px",
-            border: "1px solid #ccc",
-            borderRadius: "6px",
-            fontSize: "14px",
-            width: "100%",
-            boxSizing: "border-box",
-          }}
-        />
+
+        {/* Rate and Quantity Inputs */}
         <input
           type="number"
           name="rate"
@@ -312,14 +433,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
           value={form.rate}
           onChange={handleChange}
           required
-          style={{
-            padding: "10px",
-            border: "1px solid #ccc",
-            borderRadius: "6px",
-            fontSize: "14px",
-            width: "100%",
-            boxSizing: "border-box",
-          }}
+          className="exp-input"
         />
         <input
           type="number"
@@ -328,114 +442,63 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
           value={form.quantity}
           onChange={handleChange}
           required
-          style={{
-            padding: "10px",
-            border: "1px solid #ccc",
-            borderRadius: "6px",
-            fontSize: "14px",
-            width: "100%",
-            boxSizing: "border-box",
-          }}
+          className="exp-input"
         />
+
+        {/* Amount Display */}
         <div>Amount: ₹{form.amount}</div>
 
-        <input
-          type="date"
-          name="date"
-          value={form.date}
-          onChange={handleChange}
-          required
-          style={{
-            padding: "10px",
-            border: "1px solid #ccc",
-            borderRadius: "6px",
-            fontSize: "14px",
-            width: "100%",
-            boxSizing: "border-box",
-          }}
-        />
-        <div style={{ display: "flex", gap: "10px" }}>
-          <label
-            style={{
-              padding: "8px 15px",
-              border: "1px solid #ccc",
-              borderRadius: "6px",
-              cursor: "pointer",
-              background: form.payment_mode === "Cash" ? "#007bff" : "#f9f9f9",
-              color: form.payment_mode === "Cash" ? "#fff" : "#333",
-              fontWeight: form.payment_mode === "Cash" ? "bold" : "normal",
-              transition: "all 0.2s ease",
-            }}
-          >
-            <input
-              type="radio"
-              name="payment_mode"
-              value="Cash"
-              checked={form.payment_mode === "Cash"}
-              onChange={handleChange}
-              style={{ display: "none" }}
-            />
-            Cash
-          </label>
-
-          <label
-            style={{
-              padding: "8px 15px",
-              border: "1px solid #ccc",
-              borderRadius: "6px",
-              cursor: "pointer",
-              background: form.payment_mode === "UPI" ? "#007bff" : "#f9f9f9",
-              color: form.payment_mode === "UPI" ? "#fff" : "#333",
-              fontWeight: form.payment_mode === "UPI" ? "bold" : "normal",
-              transition: "all 0.2s ease",
-            }}
-          >
-            <input
-              type="radio"
-              name="payment_mode"
-              value="UPI"
-              checked={form.payment_mode === "UPI"}
-              onChange={handleChange}
-              style={{ display: "none" }}
-            />
-            UPI
-          </label>
+        {/* Payment Mode */}
+        <div className="payment-container">
+          {["Cash", "UPI"].map((mode) => (
+            <label
+              key={mode}
+              className={`payment-label ${
+                form.payment_mode === mode ? "active" : ""
+              }`}
+            >
+              <input
+                type="radio"
+                name="payment_mode"
+                value={mode}
+                checked={form.payment_mode === mode}
+                onChange={handleChange}
+                className="hidden-radio"
+              />
+              {mode}
+            </label>
+          ))}
         </div>
 
-        <button
-          type="submit"
-          style={{
-            background: "#007e4eff",
-            color: "#fff",
-            padding: "10px 15px",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "14px",
-          }}
-        >
-          {editingId ? "💾 Save Changes" : "+ Add Expense"}
-        </button>
-        {editingId && (
-          <button
-            type="button"
-            onClick={handleCancel}
-            style={{
-              background: "#dc3545",
-              color: "#fff",
-              padding: "10px 15px",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "14px",
-              marginLeft: "10px",
-            }}
-          >
-            ❌ Cancel
+        {/* Submit & Cancel Buttons */}
+        <div className="submit-btn-container">
+          <button type="submit" className="submit-btn">
+            {editingId ? "💾 Save Changes" : "+ Add Expense"}
           </button>
-        )}
+          {editingId && (
+            <button type="button" onClick={handleCancel} className="cancel-btn">
+              ❌ Cancel
+            </button>
+          )}
+        </div>
       </form>
 
+      <h2>💰 Past Expenditures</h2>
+      {/* Date & Filter */}
+      <div className="filter-container">
+        <label>Select Date: </label>
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+        />
+        <div className="filter-buttons">
+          <button onClick={() => setFilter("day")}>Today</button>
+          <button onClick={() => setFilter("week")}>This Week</button>
+          <button onClick={() => setFilter("month")}>This Month</button>
+          <button onClick={() => setFilter("year")}>This Year</button>
+        </div>
+      </div>
       {/* Expenditure Table */}
       <table border={1} cellPadding={8} className="exp-table">
         <thead>
@@ -501,50 +564,15 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
       </table>
 
       {/* Toast */}
-      {toast && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            right: "20px",
-            padding: "10px",
-            background: "#333",
-            color: "#fff",
-            borderRadius: "5px",
-          }}
-        >
-          {toast}
-        </div>
-      )}
+      {toast && <div className="toast">{toast}</div>}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Modal */}
       {deleteId !== null && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <div
-            style={{
-              background: "#695353ff",
-              padding: "20px",
-              borderRadius: "8px",
-              minWidth: "300px",
-            }}
-          >
+        <div className="delete-modal">
+          <div className="delete-modal-content">
             <p>Are you sure you want to delete this expense?</p>
             <button onClick={confirmDelete}>Yes</button>
-            <button onClick={cancelDelete} style={{ marginLeft: "10px" }}>
-              No
-            </button>
+            <button onClick={cancelDelete}>No</button>
           </div>
         </div>
       )}

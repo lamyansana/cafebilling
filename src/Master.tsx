@@ -45,6 +45,16 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
   const location = useLocation(); // 👈 get current route
   const isMenuPage = location.pathname.startsWith("/menu/");
 
+  const getNextOrderNumber = (orders: PendingOrder[]) => {
+    if (orders.length === 0) return 1;
+
+    const existing = orders.map((o) => parseInt(o.name.replace("Order ", "")));
+    for (let i = 1; i <= existing.length; i++) {
+      if (!existing.includes(i)) return i; // fill gap
+    }
+    return Math.max(...existing) + 1; // continue
+  };
+
   // 🔹 Helper to create a new empty order
   const createNewOrder = (orders: PendingOrder[]): PendingOrder => {
     const nextNumber = getNextOrderNumber(orders);
@@ -89,16 +99,6 @@ function Master({ cafeId, role, handleLogout }: MasterProps) {
   });
 
   // 🔹 Find the lowest missing order number for display
-
-  const getNextOrderNumber = (orders: PendingOrder[]) => {
-    if (orders.length === 0) return 1;
-
-    const existing = orders.map((o) => parseInt(o.name.replace("Order ", "")));
-    for (let i = 1; i <= existing.length; i++) {
-      if (!existing.includes(i)) return i; // fill gap
-    }
-    return Math.max(...existing) + 1; // continue
-  };
 
   // Keep pendingOrders in sync with localStorage
   useEffect(() => {
