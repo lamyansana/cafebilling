@@ -1,5 +1,5 @@
 // Analytics.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 import {
   Chart as ChartJS,
@@ -68,6 +68,8 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
 
   const [showAllExpenditures, setShowAllExpenditures] = useState(false);
   const [drilldownItem, setDrilldownItem] = useState<string | null>(null);
+  const [selectedExpItem, setSelectedExpItem] = useState<string | null>(null);
+  const [balances, setBalances] = useState({ cash: 0, upi: 0 });
 
   useEffect(() => {
     if (!cafeId) return;
@@ -104,6 +106,26 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
 
     fetchData();
   }, [cafeId]);
+
+  useEffect(() => {
+    const fetchBalances = async () => {
+      const { data, error } = await supabase
+        .from("balances")
+        .select("cash_balance, upi_balance")
+        .single();
+
+      if (!error && data) {
+        setBalances({
+          cash: data.cash_balance || 0,
+          upi: data.upi_balance || 0,
+        });
+      } else {
+        console.error("Error fetching balances:", error?.message);
+      }
+    };
+
+    fetchBalances();
+  }, []);
 
   // --- Filter by date ---
   const filterByDate = (dateStr: string) => {
@@ -162,6 +184,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
 
   const filteredOrders = orders.filter((o) => filterByDate(o.created_at));
   const filteredExpenditures = expenditures.filter((e) => filterByDate(e.date));
+
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(0);
 
   // --- KPIs ---
   const totalRevenue = filteredOrders.reduce(
@@ -364,6 +389,20 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
   filteredExpenditures.forEach((e) => {
     expenditureMap.set(e.item, (expenditureMap.get(e.item) || 0) + e.amount);
   });
+
+  // Item -> array of { date, amount }
+  const expenditureDetailsMap = new Map<
+    string,
+    { date: string; amount: number }[]
+  >();
+
+  filteredExpenditures.forEach((e) => {
+    if (!expenditureDetailsMap.has(e.item)) {
+      expenditureDetailsMap.set(e.item, []);
+    }
+    expenditureDetailsMap.get(e.item)!.push({ date: e.date, amount: e.amount });
+  });
+
   const sortedExpenditures = Array.from(expenditureMap.entries()).sort(
     (a, b) => b[1] - a[1]
   );
@@ -381,6 +420,74 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
         ),
       },
     ],
+  };
+
+  // --- Selected Item Expenditure Trend ---
+  const selectedItemData = selectedExpItem
+    ? {
+        labels: filteredExpenditures
+          .filter((e) => e.item === selectedExpItem)
+          .map((e) => new Date(e.date).toLocaleDateString()),
+        datasets: [
+          {
+            label: `${selectedExpItem} Amount`,
+            data: filteredExpenditures
+              .filter((e) => e.item === selectedExpItem)
+              .map((e) => e.amount),
+            borderColor: "purple",
+            backgroundColor: "rgba(128,0,128,0.3)",
+          },
+        ],
+      }
+    : null;
+
+  const filteredItems = Array.from(expenditureMap.keys()).filter((item) =>
+    item.toLowerCase().includes((selectedExpItem || "").toLowerCase())
+  );
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showDropdown) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIndex((prev) => {
+        const next = Math.min(prev + 1, filteredItems.length - 1);
+        scrollIntoView(next);
+        return next;
+      });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIndex((prev) => {
+        const next = Math.max(prev - 1, 0);
+        scrollIntoView(next);
+        return next;
+      });
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (filteredItems[highlightIndex]) {
+        setSelectedExpItem(filteredItems[highlightIndex]);
+        setShowDropdown(false);
+      }
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
+    }
+  };
+
+  const scrollIntoView = (index: number) => {
+    const dropdown = dropdownRef.current;
+    if (!dropdown) return;
+    const item = dropdown.children[index] as HTMLElement;
+    if (item) {
+      const itemTop = item.offsetTop;
+      const itemBottom = itemTop + item.offsetHeight;
+      if (itemTop < dropdown.scrollTop) {
+        dropdown.scrollTop = itemTop;
+      } else if (itemBottom > dropdown.scrollTop + dropdown.offsetHeight) {
+        dropdown.scrollTop = itemBottom - dropdown.offsetHeight;
+      }
+    }
   };
 
   return (
@@ -468,6 +575,23 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
         </div>
       </div>
 
+      <div className="balance-summary">
+        <h2>💰 Current Balances</h2>
+        <div className="kpi-container" style={{ marginTop: "1rem" }}>
+          <div className="kpi-card kpi-cash">
+            <div className="kpi-icon">💵</div>
+            <div className="kpi-label">Cash Balance</div>
+            <div className="kpi-value">₹{balances.cash.toFixed(2)}</div>
+          </div>
+
+          <div className="kpi-card kpi-upi">
+            <div className="kpi-icon">📲</div>
+            <div className="kpi-label">UPI Balance</div>
+            <div className="kpi-value">₹{balances.upi.toFixed(2)}</div>
+          </div>
+        </div>
+      </div>
+
       {/* Charts */}
       <div style={{ marginBottom: "2rem" }}>
         <h3>Revenue vs Expenses vs Profit</h3>
@@ -514,6 +638,76 @@ const Analytics: React.FC<AnalyticsProps> = ({ cafeId }) => {
           >
             {showAllExpenditures ? "Show Top 15 Only" : "Show All Items"}
           </button>
+        )}
+      </div>
+
+      <div
+        style={{
+          marginBottom: "2rem",
+          maxWidth: "400px",
+          position: "relative",
+        }}
+      >
+        <h3>Expenditure Item Trend</h3>
+
+        <input
+          type="text"
+          placeholder="Search expenditure item..."
+          value={selectedExpItem || ""}
+          onChange={(e) => {
+            setSelectedExpItem(e.target.value);
+            setShowDropdown(true);
+            setHighlightIndex(0);
+          }}
+          onFocus={() => setShowDropdown(true)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 100)}
+          className="exp-search-input"
+        />
+
+        {showDropdown && (
+          <div
+            ref={dropdownRef}
+            style={{
+              border: "1px solid #ccc",
+              maxHeight: "150px",
+              overflowY: "auto",
+              marginTop: "0.2rem",
+              position: "absolute",
+              backgroundColor: "white",
+              zIndex: 10,
+              width: "100%",
+            }}
+          >
+            {filteredItems.length > 0 ? (
+              filteredItems.map((item, index) => (
+                <div
+                  key={item}
+                  style={{
+                    padding: "0.3rem 0.5rem",
+                    cursor: "pointer",
+                    backgroundColor:
+                      index === highlightIndex ? "lightblue" : "transparent",
+                  }}
+                  onMouseDown={() => {
+                    setSelectedExpItem(item);
+                    setShowDropdown(false);
+                  }}
+                  onMouseEnter={() => setHighlightIndex(index)}
+                >
+                  {item}
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: "0.3rem 0.5rem" }}>No items found</div>
+            )}
+          </div>
+        )}
+
+        {selectedItemData && selectedExpItem && (
+          <div style={{ marginTop: "1rem" }}>
+            <Line data={selectedItemData} options={{ responsive: true }} />
+          </div>
         )}
       </div>
 

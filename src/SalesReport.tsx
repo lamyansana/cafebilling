@@ -647,9 +647,11 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
         <p>Revenue: ₹{revenue.toFixed(2)}</p>
         <p>Cash: ₹{salesByCash.toFixed(2)}</p>
         <p>UPI: ₹{salesByUPI.toFixed(2)}</p>
+        <p>--------</p>
         <p>Total Expenses: ₹{expenses.toFixed(2)}</p>
         <p>Expenses (Cash): ₹{expensesByCash.toFixed(2)}</p>
         <p>Expenses (UPI): ₹{expensesByUPI.toFixed(2)}</p>
+        <p>--------</p>
         <p>Net Bal (Total): ₹{profit.toFixed(2)}</p>
         <p>Net Bal (Cash): ₹{netProfitByCash.toFixed(2)}</p>
         <p>Net Bal (UPI): ₹{netProfitByUPI.toFixed(2)}</p>

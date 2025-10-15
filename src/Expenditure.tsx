@@ -47,6 +47,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
     amount: "",
     date: getLocalDate(),
     payment_mode: "Cash",
+    isNew: false,
   });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -55,6 +56,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
   const [categories, setCategories] = useState<string[]>([]);
   const itemInputRef = useRef<HTMLDivElement>(null);
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const topRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = role === "admin";
 
@@ -176,6 +178,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
       amount: "",
       date: getLocalDate(),
       payment_mode: "Cash",
+      isNew: false,
     });
     setSearch("");
   };
@@ -192,8 +195,10 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
       amount: exp.amount.toFixed(2),
       date: exp.date,
       payment_mode: exp.payment_mode,
+      isNew: false,
     });
     setSearch(exp.item);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   // Delete with modal
@@ -228,17 +233,41 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
     const rate = parseFloat(form.rate);
     const qty = parseFloat(form.quantity);
     if (!cafeId) return;
-    const expenseData = {
-      category: form.category,
-      item: form.item,
-      rate,
-      quantity: qty,
-      date: getLocalDate(new Date(form.date)),
-      payment_mode: form.payment_mode,
-      cafe_id: cafeId,
-    };
 
     try {
+      // 1️⃣ If this is a new item, insert it into expenditure_items
+      if (form.isNew) {
+        const { data: newItemData, error: newItemError } = await supabase
+          .from("expenditure_items")
+          .insert([{ name: form.item, category: form.category }])
+          .select();
+
+        if (newItemError) {
+          console.error("Failed to add new item:", newItemError.message);
+          setToast("Failed to add new item ❌");
+          return;
+        }
+
+        // Update local items state with the newly added item
+        if (newItemData && newItemData.length > 0) {
+          setItems((prev) => [...prev, newItemData[0] as Item]);
+        }
+
+        // Reset isNew flag
+        setForm((prev) => ({ ...prev, isNew: false }));
+      }
+
+      // 2️⃣ Insert/update the expense
+      const expenseData = {
+        category: form.category,
+        item: form.item,
+        rate,
+        quantity: qty,
+        date: getLocalDate(new Date(form.date)),
+        payment_mode: form.payment_mode,
+        cafe_id: cafeId,
+      };
+
       if (editingId) {
         if (!isAdmin) return;
         const { data, error } = await supabase
@@ -246,6 +275,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
           .update(expenseData)
           .eq("id", editingId)
           .select();
+
         if (!error && data) {
           setExpenses(
             expenses.map((exp) => (exp.id === editingId ? data[0] : exp))
@@ -258,12 +288,13 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
           .from("expenditures")
           .insert([expenseData])
           .select();
+
         if (!error && data) {
           setExpenses([data[0], ...expenses]);
           setToast("Expense added ✅");
           handleCancel();
         } else if (error) {
-          console.error("Insert error:", error.message);
+          console.error("Insert expense error:", error.message);
           setToast("Failed to add expense ❌");
         }
       }
@@ -290,11 +321,20 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
         !itemInputRef.current.contains(event.target as Node)
       ) {
         setShowDropdown(false);
+        setForm((prev) => {
+          // Only reset if it's NOT a new item
+          if (!prev.isNew && !items.find((i) => i.name === prev.item)) {
+            setSearch(""); // Show placeholder again
+            return { ...prev, item: "", category: "" };
+          }
+          return prev;
+        });
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [items]);
+
   // Filtered items for search suggestions
   const suggestedItems = items.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase())
@@ -302,6 +342,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
 
   return (
     <div className="exp-bg">
+      <div ref={topRef}></div>
       <h2>💰 Expenditure</h2>
 
       {/* Add/Edit Form */}
@@ -317,6 +358,8 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
         />
 
         {/* Item Search with Suggestions */}
+        {/* Item Search with Suggestions */}
+        {/* Item Search with Suggestions */}
         <div className="item-wrapper" ref={itemInputRef}>
           <input
             type="text"
@@ -325,7 +368,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
-              handleChange(e);
+              setForm((prev) => ({ ...prev, item: e.target.value }));
               setShowDropdown(true);
               setHighlightedIndex(-1);
             }}
@@ -353,11 +396,17 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
                     ...prev,
                     item: selected.name,
                     category: selected.category,
+                    isNew: false, // mark as existing item
                   }));
                   setShowDropdown(false);
-                } else if (suggestedItems.length === 0) {
-                  // handle custom item
-                  setForm((prev) => ({ ...prev, item: search, category: "" }));
+                } else if (isAdmin) {
+                  // Admin adding a new item
+                  setForm((prev) => ({
+                    ...prev,
+                    item: search,
+                    category: "", // category can be selected
+                    isNew: true, // mark as new item
+                  }));
                   setShowDropdown(false);
                 }
               } else if (e.key === "Escape") {
@@ -367,7 +416,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
             className="exp-input search-input"
           />
 
-          {showDropdown && search && (
+          {showDropdown && (
             <ul className="item-suggestions">
               {suggestedItems.length > 0 ? (
                 suggestedItems.map((i, idx) => (
@@ -381,6 +430,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
                         ...prev,
                         item: i.name,
                         category: i.category,
+                        isNew: false,
                       }));
                       setShowDropdown(false);
                     }}
@@ -388,7 +438,7 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
                     {i.name}
                   </li>
                 ))
-              ) : (
+              ) : isAdmin ? (
                 <li
                   className="custom-item-option"
                   onClick={() => {
@@ -396,12 +446,15 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
                       ...prev,
                       item: search,
                       category: "",
+                      isNew: true, // new item
                     }));
                     setShowDropdown(false);
                   }}
                 >
-                  + Add Custom Item
+                  + Add New Item
                 </li>
+              ) : (
+                <li className="no-item-option">No items found</li>
               )}
             </ul>
           )}
@@ -411,13 +464,19 @@ const Expenditure: React.FC<ExpenditureProps> = ({ cafeId, role }) => {
         <select
           name="category"
           value={form.category}
-          onChange={handleChange}
+          onChange={(e) =>
+            setForm((prev) => ({
+              ...prev,
+              category: e.target.value,
+              // only set item if it's an existing item
+              item: prev.isNew ? prev.item : prev.item,
+            }))
+          }
           required
           className="category-select"
+          disabled={!isAdmin && !form.isNew}
         >
-          <option value="" disabled>
-            Select Category
-          </option>
+          <option value="">Select Category</option>
           {categories.map((cat) => (
             <option key={cat} value={cat}>
               {cat}

@@ -479,6 +479,14 @@ body {
   background: #8e44ad; /* Purple */
 }
 
+.kpi-cash {
+  background: #00b894; /* green */
+}
+
+.kpi-upi {
+  background: #0984e3; /* blue */
+}
+
 /* ---------- MOBILE RESPONSIVE + DARK MODE ---------- */
 @media (max-width: 768px) {
   /* ---------- General Mobile Layout ---------- */
