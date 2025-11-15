@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "./supabaseClient";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
@@ -6,7 +6,6 @@ import { formatDate } from "./formatDate";
 import "./App.css";
 
 interface SalesReportProps {
-  //session: any;
   cafeId: number | null;
 }
 
@@ -25,7 +24,10 @@ type Expenditure = {
   item: string;
 };
 
-// --- Helper function for formatting date ---
+type SortConfig = {
+  key: string;
+  direction: "asc" | "desc";
+} | null;
 
 const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -46,10 +48,8 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       setIsDark(document.body.classList.contains("dark"));
     };
 
-    // run once on mount
     updateDark();
 
-    // observe class changes on body
     const observer = new MutationObserver(updateDark);
     observer.observe(document.body, {
       attributes: true,
@@ -59,27 +59,22 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     return () => observer.disconnect();
   }, []);
 
-  ////////////////////
-
   const dateRef = useRef<HTMLInputElement>(null);
   const rangeStartRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (filter === "date" && dateRef.current) {
-      dateRef.current.showPicker?.(); // 🔹 auto-open single date
+      dateRef.current.showPicker?.();
     }
     if (filter === "range" && rangeStartRef.current) {
-      rangeStartRef.current.showPicker?.(); // 🔹 auto-open start date
+      rangeStartRef.current.showPicker?.();
     }
   }, [filter]);
 
   useEffect(() => {
-    if (!cafeId) return; // Avoid fetching if cafeId is null
+    if (!cafeId) return;
 
     const fetchData = async () => {
-      // Menu items
-
-      // Orders with items
       const { data: ordersData, error: ordersError } = await supabase
         .from("orders")
         .select(
@@ -110,7 +105,6 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
         );
       }
 
-      // Expenditures
       const { data: expData, error: expError } = await supabase
         .from("expenditures")
         .select("amount, date, payment_mode, item")
@@ -132,7 +126,59 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     fetchData();
   }, [cafeId]);
 
-  // Date filter
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState<SortConfig>(null);
+
+  // Generic toggle-sort helper
+  const toggleSort = (key: string) => {
+    setSortConfig((prev) => {
+      if (!prev || prev.key !== key) {
+        return { key, direction: "asc" };
+      }
+      // same key -> toggle
+      return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+    });
+  };
+
+  // Generic sort function (pure)
+  const sortArray = <T,>(
+    data: T[],
+    key: keyof T | string,
+    direction: "asc" | "desc"
+  ) => {
+    const copy = [...data];
+    copy.sort((a: any, b: any) => {
+      const av = a[key as any];
+      const bv = b[key as any];
+
+      // handle undefined/null
+      if (av == null && bv == null) return 0;
+      if (av == null) return direction === "asc" ? -1 : 1;
+      if (bv == null) return direction === "asc" ? 1 : -1;
+
+      // numbers
+      if (typeof av === "number" && typeof bv === "number") {
+        return direction === "asc" ? av - bv : bv - av;
+      }
+
+      // dates stored as ISO or date strings
+      const aDate = new Date(av);
+      const bDate = new Date(bv);
+      if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
+        return direction === "asc"
+          ? aDate.getTime() - bDate.getTime()
+          : bDate.getTime() - aDate.getTime();
+      }
+
+      // fallback to string compare
+      return direction === "asc"
+        ? String(av).localeCompare(String(bv))
+        : String(bv).localeCompare(String(av));
+    });
+    return copy;
+  };
+
+  // Date filter helper
   const filterByDate = (dateStr: string) => {
     const now = new Date();
     const d = new Date(dateStr);
@@ -180,31 +226,33 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     filterByDate(e.expense_date)
   );
 
-  // Aggregate item-wise sales
-  const itemSales = filteredOrders
-    .flatMap((o) =>
-      o.order_items.map((it) => ({
-        name: it.item_name,
-        quantity: it.quantity,
-        amount: it.quantity * it.price,
-      }))
-    )
-    .reduce((acc, cur) => {
-      const existing = acc.find((a) => a.name === cur.name);
-      if (existing) {
-        existing.quantity += cur.quantity;
-        existing.amount += cur.amount;
-      } else {
-        acc.push({ ...cur });
-      }
-      return acc;
-    }, [] as { name: string; quantity: number; amount: number }[]);
+  // Aggregate item-wise sales (same as original)
+  const itemSales = useMemo(() => {
+    return filteredOrders
+      .flatMap((o) =>
+        o.order_items.map((it) => ({
+          name: it.item_name,
+          quantity: it.quantity,
+          amount: it.quantity * it.price,
+        }))
+      )
+      .reduce((acc, cur) => {
+        const existing = acc.find((a) => a.name === cur.name);
+        if (existing) {
+          existing.quantity += cur.quantity;
+          existing.amount += cur.amount;
+        } else {
+          acc.push({ ...cur });
+        }
+        return acc;
+      }, [] as { name: string; quantity: number; amount: number }[]);
+  }, [filteredOrders]);
 
+  // Precompute totals
   const revenue = filteredOrders.reduce((sum, o) => sum + o.total_amount, 0);
   const expenses = filteredExpenditures.reduce((sum, e) => sum + e.amount, 0);
   const profit = revenue - expenses;
 
-  // Breakdown by payment mode
   const salesByCash = filteredOrders
     .filter((o) => o.payment_mode === "Cash")
     .reduce((sum, o) => sum + o.total_amount, 0);
@@ -224,7 +272,52 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
   const netProfitByCash = salesByCash - expensesByCash;
   const netProfitByUPI = salesByUPI - expensesByUPI;
 
-  // CSV download
+  // --- Prepare itemSales with sorting keys (Option A) ---
+  const itemSalesWithKeys = useMemo(
+    () =>
+      itemSales.map((i) => ({
+        ...i,
+        item_name: i.name,
+        item_quantity: i.quantity,
+        item_amount: i.amount,
+      })),
+    [itemSales]
+  );
+
+  // Sorted itemSales for display
+  const sortedItemSales = useMemo(() => {
+    if (!sortConfig) return itemSalesWithKeys;
+    // only apply item_ prefixed sorts to item table
+    if (!sortConfig.key.startsWith("item_")) return itemSalesWithKeys;
+
+    // remove 'item_' prefix and use remaining key on the object
+    const key = sortConfig.key; // use full key because we built item_* keys
+    return sortArray(itemSalesWithKeys, key, sortConfig.direction);
+  }, [itemSalesWithKeys, sortConfig]);
+
+  // --- Prepare expenditures with sorting keys (Option A) ---
+  const expendituresWithKeys = useMemo(
+    () =>
+      filteredExpenditures.map((e) => ({
+        ...e,
+        exp_item: e.item,
+        exp_amount: e.amount,
+        exp_date: e.expense_date,
+        exp_payment_mode: e.payment_mode,
+      })),
+    [filteredExpenditures]
+  );
+
+  // Sorted expenditures for display
+  const sortedExpenditures = useMemo(() => {
+    if (!sortConfig) return expendituresWithKeys;
+    if (!sortConfig.key.startsWith("exp_")) return expendituresWithKeys;
+
+    const key = sortConfig.key;
+    return sortArray(expendituresWithKeys, key, sortConfig.direction);
+  }, [expendituresWithKeys, sortConfig]);
+
+  // CSV download (keeps original logic)
   const downloadCSV = () => {
     const rows: string[][] = [
       ["Item", "Quantity Sold", "Amount"],
@@ -254,10 +347,9 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     saveAs(blob, "sales_report.csv");
   };
 
-  // PDF download
+  // PDF download (keeps original logic)
   const downloadPDF = async () => {
-    // Fetch cafe name
-    let cafeName = "Cafe"; // fallback
+    let cafeName = "Cafe";
     if (cafeId) {
       const { data, error } = await supabase
         .from("cafes")
@@ -267,42 +359,36 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       if (!error && data) cafeName = data.name;
     }
 
-    // Create jsPDF instance
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const leftMargin = 40;
     const rightMargin = 40;
-    const tableWidth = pageWidth - leftMargin - rightMargin; // auto scale to page
-    const reservedHeaderSpace = 80; // enough for cafe name + report title
+    const tableWidth = pageWidth - leftMargin - rightMargin;
+    const reservedHeaderSpace = 80;
     const reservedFooterSpace = 50;
 
     const totalPagesExp = "{total_pages_count_string}";
     let y = 60;
 
-    // --- Header ---
     const addHeader = () => {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
       doc.text(cafeName, pageWidth / 2, 40, { align: "center" });
       doc.setFontSize(14);
       doc.text("Sales Report", pageWidth / 2, 60, { align: "center" });
-      // Reset cursor after header
       y = reservedHeaderSpace;
     };
 
-    // --- Footer ---
     const addFooter = (pageNum: number) => {
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const footerY = pageHeight - 20;
 
-      // Line above footer
       doc.setDrawColor(150);
       doc.setLineWidth(0.2);
       doc.line(40, footerY - 10, pageWidth - 40, footerY - 10);
 
-      // Footer text
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       const footerText = `Page ${pageNum} of ${totalPagesExp}`;
@@ -310,14 +396,12 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       doc.text(footerText, pageWidth / 2, footerY, { align: "center" });
     };
 
-    // --- Page break check ---
     const checkPageBreak = (neededSpace = 0) => {
       if (y + neededSpace > pageHeight - reservedFooterSpace) {
         addFooter(doc.internal.getNumberOfPages());
         doc.addPage();
         addHeader();
-        y = reservedHeaderSpace; //reset header space
-
+        y = reservedHeaderSpace;
         doc.setFont("helvetica", "normal");
       }
     };
@@ -325,7 +409,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     addHeader();
 
     let fileDatePart = "";
-    // --- Date Text ---
+
     checkPageBreak(30);
     let dateText = "Date: ";
     if (filter === "range" && customStart && customEnd) {
@@ -362,7 +446,6 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     doc.text(dateText, leftMargin, y);
     y += 30;
 
-    // --- Table Function ---
     const drawTable = (
       title: string,
       headers: string[],
@@ -378,9 +461,8 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       y += 20;
 
       const colCount = headers.length;
-      const colWidths = headers.map(() => tableWidth / colCount); // auto scale
+      const colWidths = headers.map(() => tableWidth / colCount);
 
-      // --- Header row ---
       let x = leftMargin;
       const headerHeight = lineHeight + cellPadding * 2;
       headers.forEach((h, i) => {
@@ -394,9 +476,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
 
       doc.setFont("helvetica", "normal");
 
-      // --- Data rows ---
       data.forEach((row) => {
-        // 🔹 Handle page break BEFORE calculating wrapped text
         if (
           y + lineHeight + cellPadding * 2 >
           pageHeight - reservedFooterSpace
@@ -405,7 +485,6 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
           doc.addPage();
           addHeader();
 
-          // redraw headers
           let x = leftMargin;
           headers.forEach((h, i) => {
             doc.rect(x, y, colWidths[i], headerHeight);
@@ -419,7 +498,6 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
           doc.setFontSize(12);
         }
 
-        // 🔹 Now wrap text after page context is stable
         const wrappedTexts: string[][] = [];
         let maxRowHeight = lineHeight + cellPadding * 2;
 
@@ -433,7 +511,6 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
           if (cellHeight > maxRowHeight) maxRowHeight = cellHeight;
         });
 
-        // draw row
         let x = leftMargin;
         wrappedTexts.forEach((lines, i) => {
           doc.rect(x, y, colWidths[i], maxRowHeight);
@@ -453,7 +530,6 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       y += 20;
     };
 
-    // --- Tables ---
     drawTable(
       "Items Sold",
       ["Item", "Quantity Sold", "Amount (Rs)"],
@@ -462,12 +538,12 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
 
     drawTable(
       "Expenditures",
-      ["Item", "Amount (Rs)", "Date", "Payment Mode"], // added Payment Mode
+      ["Item", "Amount (Rs)", "Date", "Payment Mode"],
       filteredExpenditures.map((e) => [
         e.item ?? "-",
         `${e.amount}`,
         formatDate(e.expense_date),
-        e.payment_mode ?? "-", // ensure value exists
+        e.payment_mode ?? "-",
       ])
     );
 
@@ -488,15 +564,12 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       ]
     );
 
-    // --- Footer for all pages ---
     const totalPages = doc.internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       addFooter(i);
     }
     doc.putTotalPages(totalPagesExp);
-
-    // --- Dynamic filename ---
 
     if (filter === "range" && customStart && customEnd) {
       const start = formatDate(customStart).replace(/ /g, "-");
@@ -529,6 +602,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     doc.save(fileName);
   };
 
+  // render
   return (
     <div className="sales-bg">
       <h2>📊 Sales Report</h2>
@@ -574,6 +648,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
           <span style={{ marginLeft: "1rem" }}>
             From:{" "}
             <input
+              ref={rangeStartRef}
               type="date"
               value={customStart}
               onChange={(e) => setCustomStart(e.target.value)}
@@ -597,14 +672,63 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
       >
         <thead>
           <tr>
-            <th>Item</th>
-            <th>Quantity Sold</th>
-            <th>Amount (₹)</th>
+            <th
+              style={{ cursor: "pointer", userSelect: "none" }}
+              onClick={() => toggleSort("item_name")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") toggleSort("item_name");
+              }}
+            >
+              Item{" "}
+              {sortConfig?.key === "item_name"
+                ? sortConfig.direction === "asc"
+                  ? "▲"
+                  : "▼"
+                : ""}
+            </th>
+
+            <th
+              style={{ cursor: "pointer", userSelect: "none" }}
+              onClick={() => toggleSort("item_quantity")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ")
+                  toggleSort("item_quantity");
+              }}
+            >
+              Quantity Sold{" "}
+              {sortConfig?.key === "item_quantity"
+                ? sortConfig.direction === "asc"
+                  ? "▲"
+                  : "▼"
+                : ""}
+            </th>
+
+            <th
+              style={{ cursor: "pointer", userSelect: "none" }}
+              onClick={() => toggleSort("item_amount")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ")
+                  toggleSort("item_amount");
+              }}
+            >
+              Amount (₹){" "}
+              {sortConfig?.key === "item_amount"
+                ? sortConfig.direction === "asc"
+                  ? "▲"
+                  : "▼"
+                : ""}
+            </th>
           </tr>
         </thead>
         <tbody>
-          {itemSales.map((item) => (
-            <tr key={item.name}>
+          {sortedItemSales.map((item) => (
+            <tr key={item.item_name}>
               <td>{item.name}</td>
               <td>{item.quantity}</td>
               <td>{item.amount}</td>
@@ -623,15 +747,82 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
         >
           <thead>
             <tr>
-              <th>Item</th>
-              <th>Amount</th>
-              <th>Date</th>
-              <th>Payment Mode</th>
+              <th
+                style={{ cursor: "pointer", userSelect: "none" }}
+                onClick={() => toggleSort("exp_item")}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ")
+                    toggleSort("exp_item");
+                }}
+              >
+                Item{" "}
+                {sortConfig?.key === "exp_item"
+                  ? sortConfig.direction === "asc"
+                    ? "▲"
+                    : "▼"
+                  : ""}
+              </th>
+
+              <th
+                style={{ cursor: "pointer", userSelect: "none" }}
+                onClick={() => toggleSort("exp_amount")}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ")
+                    toggleSort("exp_amount");
+                }}
+              >
+                Amount{" "}
+                {sortConfig?.key === "exp_amount"
+                  ? sortConfig.direction === "asc"
+                    ? "▲"
+                    : "▼"
+                  : ""}
+              </th>
+
+              <th
+                style={{ cursor: "pointer", userSelect: "none" }}
+                onClick={() => toggleSort("exp_date")}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ")
+                    toggleSort("exp_date");
+                }}
+              >
+                Date{" "}
+                {sortConfig?.key === "exp_date"
+                  ? sortConfig.direction === "asc"
+                    ? "▲"
+                    : "▼"
+                  : ""}
+              </th>
+
+              <th
+                style={{ cursor: "pointer", userSelect: "none" }}
+                onClick={() => toggleSort("exp_payment_mode")}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ")
+                    toggleSort("exp_payment_mode");
+                }}
+              >
+                Payment Mode{" "}
+                {sortConfig?.key === "exp_payment_mode"
+                  ? sortConfig.direction === "asc"
+                    ? "▲"
+                    : "▼"
+                  : ""}
+              </th>
             </tr>
           </thead>
           <tbody>
-            {filteredExpenditures.map((e, idx) => (
-              <tr key={idx}>
+            {sortedExpenditures.map((e, idx) => (
+              <tr key={`${e.exp_item ?? e.item}-${e.exp_amount}-${idx}`}>
                 <td>{e.item}</td>
                 <td>{e.amount}</td>
                 <td>{formatDate(e.expense_date)}</td>
@@ -641,6 +832,7 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
           </tbody>
         </table>
       </div>
+
       {/* Summary */}
       <div style={{ color: isDark ? "#e0e0e0" : "#333" }}>
         <h3>Summary</h3>
@@ -665,4 +857,5 @@ const SalesReport: React.FC<SalesReportProps> = ({ cafeId }) => {
     </div>
   );
 };
+
 export default SalesReport;

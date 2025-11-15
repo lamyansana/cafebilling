@@ -256,7 +256,9 @@ function CenterPane({ addToCart }: CenterPaneProps) {
                   setCustomItem({ ...customItem, category: e.target.value })
                 }
               />
-              <button type="submit">Add to Cart</button>
+              <button type="submit" className="add-to-cart">
+                Add to Cart
+              </button>
             </form>
           }
         />

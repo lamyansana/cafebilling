@@ -426,6 +426,22 @@ body {
   color: darkred;
 }
 
+.add-to-cart {
+  background-color: #2aa046ff; /* green */
+  color: white; /* white text */
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.add-to-cart:hover {
+  background-color: #0e6d22ff; /* darker green on hover */
+}
+
 .kpi-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
